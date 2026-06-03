@@ -1,0 +1,59 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11822.327 insiders
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{3A8DF596-E814-FECC-DD4B-D8EF8AAC1A0D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VmmSharpEx", "lib\VmmSharpEx\VmmSharpEx.csproj", "{29AD90CC-4570-4B10-BB78-EA8381464C49}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src-silk", "src-silk", "{93350626-D752-32FA-2F52-C589771CDCD2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eft-dma-radar", "src-silk\eft-dma-radar.csproj", "{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Debug|x64.ActiveCfg = Debug|x64
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Debug|x64.Build.0 = Debug|x64
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Debug|x86.Build.0 = Debug|Any CPU
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Release|x64.ActiveCfg = Release|x64
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Release|x64.Build.0 = Release|x64
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Release|x86.ActiveCfg = Release|Any CPU
+		{29AD90CC-4570-4B10-BB78-EA8381464C49}.Release|x86.Build.0 = Release|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Debug|x64.ActiveCfg = Debug|x64
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Debug|x64.Build.0 = Debug|x64
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Debug|x86.Build.0 = Debug|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Release|x64.ActiveCfg = Release|x64
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Release|x64.Build.0 = Release|x64
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Release|x86.ActiveCfg = Release|Any CPU
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{29AD90CC-4570-4B10-BB78-EA8381464C49} = {3A8DF596-E814-FECC-DD4B-D8EF8AAC1A0D}
+		{EDE94D9F-F5FB-4037-82D9-D44E085AE6E0} = {93350626-D752-32FA-2F52-C589771CDCD2}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E17F0725-5A6C-413A-A5D6-B980FDD8449F}
+	EndGlobalSection
+EndGlobal
