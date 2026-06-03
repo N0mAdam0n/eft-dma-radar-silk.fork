@@ -599,6 +599,8 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Show Crosshair"] = "显示准星",
             ["Style"] = "样式",
             ["Scale"] = "缩放",
+            ["Crosshair Style Tooltip"] = "屏幕中心绘制的准星形状",
+            ["Crosshair Scale Tooltip"] = "准星大小倍数",
             ["HUD"] = "HUD",
             ["Show FPS"] = "显示帧率",
             ["Show Status Text"] = "显示状态文本",

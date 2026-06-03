@@ -173,7 +173,7 @@ namespace eft_dma_radar.Silk.UI.Panels
 
                 int cType = Config.EspCrosshairType;
                 if (UIControls.ComboRow(Chinese.E("Style"), ref cType, _espCrosshairTypes,
-                    "屏幕中心绘制的准星形状"))
+                    Chinese.E("Crosshair Style Tooltip")))
                 {
                     Config.EspCrosshairType = cType;
                     Config.MarkDirty();
@@ -181,7 +181,7 @@ namespace eft_dma_radar.Silk.UI.Panels
 
                 float cScale = Config.EspCrosshairScale;
                 if (UIControls.StepperFloat(Chinese.E("Scale"), ref cScale, 0.5f, 5f, 0.1f, "{0:0.0}x",
-                    "准星大小倍数"))
+                    Chinese.E("Crosshair Scale Tooltip")))
                 {
                     Config.EspCrosshairScale = cScale;
                     Config.MarkDirty();
