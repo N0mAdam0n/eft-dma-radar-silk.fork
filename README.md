@@ -1,3 +1,6 @@
+forked from https://github.com/HuiTeab/eft-dma-radar-silk
+一个汉化版本
+本项目使用AI编程
 # EFT DMA Radar — Silk.NET Edition (Unity 2022)
 
 A modern DMA (Direct Memory Access) radar overlay for **Escape from Tarkov** (Unity 2022.3.43f1 EFT build), built on [Silk.NET](https://github.com/dotnet/Silk.NET) (Windowing / Input / OpenGL), [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET) panels, and [SkiaSharp](https://github.com/mono/SkiaSharp) 2D rendering. Ships with an embedded ASP.NET Core web radar.
