@@ -3,7 +3,6 @@
 // See LICENSE in the repository root for details.
 
 using System.Runtime.CompilerServices;
-using eft_dma_radar.Silk.Tarkov.GameWorld.Loot;
 using eft_dma_radar.Silk.Tarkov.GameWorld.Player;
 using eft_dma_radar.Silk.Tarkov.Unity;
 using Silk.NET.Maths;
@@ -411,94 +410,21 @@ namespace eft_dma_radar.Silk.UI.ESP
                 }
             }
 
-            // Corpses (X marker + name/value/distance label, similar to radar + aimview)
-            if (Config.EspShowCorpses)
-            {
-                var corpses = Memory.Corpses;
-                if (corpses is not null)
-                {
-                    float maxDistSq = Config.EspCorpseDistance * Config.EspCorpseDistance;
-
-                    foreach (var corpse in corpses)
-                    {
-                        var cPos = corpse.Position;
-                        if (!IsFinite(cPos) || cPos.LengthSquared() < 1f)
-                            continue;
-
-                        float distSq = Vector3.DistanceSquared(localPos, cPos);
-                        if (!float.IsFinite(distSq) || distSq > maxDistSq)
-                            continue;
-
-                        try
-                        {
-                            DrawCorpse(canvas, corpse, MathF.Sqrt(distSq));
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.WriteRateLimited(AppLogLevel.Warning, "esp_corpse_draw", TimeSpan.FromSeconds(5),
-                                $"[EspWindow] DrawCorpse failed: {ex.Message}");
-                        }
-                    }
-                }
-            }
-
-            // Quest zones (uses same config as radar Quest Zones tab)
-            if (Config.ShowQuests)
-            {
-                var questLocs = Memory.QuestLocations;
-                if (questLocs is not null)
-                {
-                    bool showOptional = Config.QuestShowOptional;
-                    bool showOutlines = Config.QuestShowOutlines;
-                    bool showKill = Config.QuestShowKillZones;
-                    bool showFind = Config.QuestShowFindZones;
-                    bool showPlace = Config.QuestShowPlaceZones;
-                    bool showReach = Config.QuestShowReachZones;
-                    float maxDist = Config.QuestMaxDistance;
-                    bool useMaxDist = maxDist > 0f;
-
-                    foreach (var loc in questLocs)
-                    {
-                        if (!showOptional && loc.Optional)
-                            continue;
-
-                        bool typeAllowed = loc.ObjectiveType switch
-                        {
-                            Tarkov.GameWorld.Quests.QuestObjectiveType.FindItem => showFind,
-                            Tarkov.GameWorld.Quests.QuestObjectiveType.PlaceItem => showPlace,
-                            Tarkov.GameWorld.Quests.QuestObjectiveType.VisitLocation => showReach,
-                            _ => showKill,
-                        };
-                        if (!typeAllowed)
-                            continue;
-
-                        var qPos = loc.Position;
-                        if (!IsFinite(qPos) || qPos.LengthSquared() < 1f)
-                            continue;
-
-                        float distSq = Vector3.DistanceSquared(localPos, qPos);
-                        if (useMaxDist && distSq > maxDist * maxDist)
-                            continue;
-
-                        try
-                        {
-                            DrawQuestZone(canvas, loc, MathF.Sqrt(distSq));
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.WriteRateLimited(AppLogLevel.Warning, "esp_quest_draw", TimeSpan.FromSeconds(5),
-                                $"[EspWindow] DrawQuestZone failed: {ex.Message}");
-                        }
-                    }
-                }
-            }
-
             // Ballistics overlay — predicted trajectory + live shot trails.
             try { BallisticsRenderer.Draw(canvas); }
             catch (Exception ex)
             {
                 Log.WriteRateLimited(AppLogLevel.Warning, "esp_ballistics_draw", TimeSpan.FromSeconds(5),
                     $"[EspWindow] BallisticsRenderer.Draw failed: {ex.Message}");
+            }
+
+            // Grenade trajectory trails (drag tail + bold current dot) + in-hand prediction arc.
+            // Controlled from 透视设置 (EspTab). Trails persist briefly after the grenade is gone.
+            try { GrenadeEspRenderer.Draw(canvas); }
+            catch (Exception ex)
+            {
+                Log.WriteRateLimited(AppLogLevel.Warning, "esp_grenade_draw", TimeSpan.FromSeconds(5),
+                    $"[EspWindow] GrenadeEspRenderer.Draw failed: {ex.Message}");
             }
         }
 
@@ -788,102 +714,6 @@ namespace eft_dma_radar.Silk.UI.ESP
 
             canvas.DrawText(label, lx + 1, ly + 1, EspPaints.FontLoot, EspPaints.TextShadow);
             canvas.DrawText(label, lx, ly, EspPaints.FontLoot, textPaint);
-        }
-
-        /// <summary>
-        /// Draws a corpse as a small X marker (like radar) + optional label with name/value + distance.
-        /// Reuses corpse theme color from paints. No skeleton/box since it's dead loot container.
-        /// </summary>
-        private static void DrawCorpse(SKCanvas canvas, LootCorpse corpse, float distance)
-        {
-            var pos = corpse.Position;
-            if (!CameraManager.WorldToScreen(ref pos, out var screenPos, false, false))
-                return;
-
-            // Draw X marker (small, distance scaled like aimview/radar)
-            float s = float.Clamp(5.5f - distance * 0.015f, 2.8f, 5.5f);
-            float px = screenPos.X, py = screenPos.Y;
-
-            // Outline for readability
-            canvas.DrawLine(px - s, py - s, px + s, py + s, EspPaints.CorpseXOutline);
-            canvas.DrawLine(px - s, py + s, px + s, py - s, EspPaints.CorpseXOutline);
-            // Main X
-            canvas.DrawLine(px - s, py - s, px + s, py + s, EspPaints.CorpseX);
-            canvas.DrawLine(px - s, py + s, px + s, py - s, EspPaints.CorpseX);
-
-            // Label (name + optional value + dist). Mirror radar/aimview + ESP loot style.
-            string label;
-            int val = corpse.TotalValue;
-            if (Config.ShowCorpseValue && val > 0)
-                label = $"{corpse.Name} ({LootFilter.FormatPrice(val, false)}) [{(int)distance}m]";
-            else
-                label = $"{corpse.Name} [{(int)distance}m]";
-
-            float labelWidth = EspPaints.FontLoot.MeasureText(label);
-            float lx = screenPos.X - labelWidth / 2f;
-            float ly = screenPos.Y + s + 3f;  // below the X a bit
-
-            canvas.DrawText(label, lx + 1, ly + 1, EspPaints.FontLoot, EspPaints.TextShadow);
-            canvas.DrawText(label, lx, ly, EspPaints.FontLoot, EspPaints.TextCorpse);
-        }
-
-        /// <summary>
-        /// Draws a quest zone marker + optional name/distance in ESP.
-        /// Supports outlines if available by projecting vertices.
-        /// </summary>
-        private static void DrawQuestZone(SKCanvas canvas, QuestLocation loc, float distance)
-        {
-            var pos = loc.Position;
-            if (!CameraManager.WorldToScreen(ref pos, out var screenPos, false, false))
-                return;
-
-            // Marker circle (like radar)
-            canvas.DrawCircle(screenPos.X, screenPos.Y, 4f, EspPaints.QuestMarkerOutline);
-            canvas.DrawCircle(screenPos.X, screenPos.Y, 4f, EspPaints.QuestMarker);
-
-            // Outline polygon if present (project each point)
-            if (showOutlinesForQuest(loc)) // helper to avoid long if, but inline
-            {
-                var outline = loc.Outline;
-                if (outline != null && outline.Count > 1)
-                {
-                    for (int i = 0; i < outline.Count; i++)
-                    {
-                        var p1 = outline[i];
-                        var p2 = outline[(i + 1) % outline.Count];
-                        if (!CameraManager.WorldToScreen(ref p1, out var s1, false, false)) continue;
-                        if (!CameraManager.WorldToScreen(ref p2, out var s2, false, false)) continue;
-                        canvas.DrawLine(s1.X, s1.Y, s2.X, s2.Y, EspPaints.QuestOutline);
-                    }
-                }
-            }
-
-            // Labels
-            float baseY = screenPos.Y + 8f;
-            if (Config.QuestShowNames)
-            {
-                string name = loc.QuestName;
-                float nw = EspPaints.FontInfo.MeasureText(name);
-                float nx = screenPos.X - nw / 2f;
-                canvas.DrawText(name, nx + 1, baseY + 1, EspPaints.FontInfo, EspPaints.TextShadow);
-                canvas.DrawText(name, nx, baseY, EspPaints.FontInfo, EspPaints.TextQuest);
-                baseY += EspPaints.FontInfo.Size + 2f;
-            }
-
-            if (Config.QuestShowDistance)
-            {
-                string dstr = $"{(int)distance}m";
-                float dw = EspPaints.FontInfo.MeasureText(dstr);
-                float dx = screenPos.X - dw / 2f;
-                canvas.DrawText(dstr, dx + 1, baseY + 1, EspPaints.FontInfo, EspPaints.TextShadow);
-                canvas.DrawText(dstr, dx, baseY, EspPaints.FontInfo, EspPaints.TextQuest);
-            }
-        }
-
-        private static bool showOutlinesForQuest(QuestLocation loc)
-        {
-            // simple, use the config
-            return Config.QuestShowOutlines && loc.Outline != null && loc.Outline.Count > 2;
         }
 
         #endregion

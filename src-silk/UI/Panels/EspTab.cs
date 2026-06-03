@@ -96,7 +96,7 @@ namespace eft_dma_radar.Silk.UI.Panels
 
             float pDist = Config.EspPlayerDistance;
             if (UIControls.StepperFloat(Chinese.E("Max Distance"), ref pDist, 10f, 2000f, 10f, "{0:0}m",
-                "超出此距离的玩家不会被绘制", id: "esp-player-maxdist"))
+                "超出此距离的玩家不会被绘制"))
             {
                 Config.EspPlayerDistance = pDist;
                 Config.MarkDirty();
@@ -113,52 +113,13 @@ namespace eft_dma_radar.Silk.UI.Panels
 
             float lDist = Config.EspLootDistance;
             if (UIControls.StepperFloat(Chinese.E("Max Distance"), ref lDist, 10f, 500f, 5f, "{0:0}m",
-                "超出此距离的物资不会被绘制", id: "esp-loot-maxdist"))
+                "超出此距离的物资不会被绘制"))
             {
                 Config.EspLootDistance = lDist;
                 Config.MarkDirty();
             }
 
-            UIControls.Section(Chinese.E("Corpses"));
-
-            bool showCorpses = Config.EspShowCorpses;
-            if (UIControls.ToggleRow(Chinese.E("Show Corpses"), ref showCorpses,
-                "在透视窗口中显示尸体 X 标记和标签（名称/价值/距离）。对应雷达的尸体显示功能。"))
-            {
-                Config.EspShowCorpses = showCorpses;
-                Config.MarkDirty();
-            }
-
-            float cDist = Config.EspCorpseDistance;
-            if (UIControls.StepperFloat(Chinese.E("Max Distance"), ref cDist, 10f, 500f, 5f, "{0:0}m",
-                "超出此距离的尸体不会被绘制在透视窗口中", id: "esp-corpse-maxdist"))
-            {
-                Config.EspCorpseDistance = cDist;
-                Config.MarkDirty();
-            }
-
-            // Reuse global ShowCorpseValue for label (consistent with radar/aimview corpse value display)
-            bool showCValue = Config.ShowCorpseValue;
-            if (UIControls.ToggleRow(Chinese.E("Show Corpse Value"), ref showCValue,
-                "在透视的尸体标签中显示装备总价值（如果已读取）。与雷达/瞄准视角设置共享。"))
-            {
-                Config.ShowCorpseValue = showCValue;
-                Config.MarkDirty();
-            }
-
             UIControls.Section(Chinese.E("Crosshair"));
-
-            // Note for quest zones in ESP
-            UIControls.Section(Chinese.Q("Quest Zones (ESP)"));
-            ImGui.TextDisabled("Uses the radar Quest Zones settings (see 'Q' tab).");
-            ImGui.TextDisabled("Enable 'Show Quest Zones' in Quest Zones tab to display zone markers in ESP too.");
-            ImGui.TextDisabled("Filters (Kappa, types, distance, outlines, names) apply to both radar and ESP.");
-
-            // Note for quest zones in ESP
-            UIControls.Section(Chinese.Q("Quest Zones (ESP)"));
-            ImGui.TextDisabled("Uses the radar Quest Zones settings (see 'Q' tab).");
-            ImGui.TextDisabled("Enable 'Show Quest Zones' in Quest Zones tab to display zone markers in ESP too.");
-            ImGui.TextDisabled("Filters (Kappa, types, distance, outlines, names) apply to both radar and ESP.");
 
             bool crosshair = Config.EspShowCrosshair;
             if (UIControls.ToggleRow(Chinese.E("Show Crosshair"), ref crosshair))
@@ -293,6 +254,58 @@ namespace eft_dma_radar.Silk.UI.Panels
                 {
                     bcfg.LiveShotLifetime = lifetime;
                     BallisticsFeature.Instance.Tracker.Lifetime = TimeSpan.FromSeconds(lifetime);
+                    Config.MarkDirty();
+                }
+
+                ImGui.Unindent(16);
+            }
+
+            // ── Grenade trajectory on ESP (actual sampled trails + bold dot + brief persistence) ──
+            UIControls.Section(Chinese.E("Grenades (ESP)"));
+
+            var gcfg = Config.EspGrenades ??= new EspGrenadeConfig();
+
+            bool gEnabled = gcfg.Enabled;
+            if (UIControls.ToggleRow(Chinese.E("Enable Grenade ESP"), ref gEnabled,
+                "在透视窗口上绘制手雷的实际飞行轨迹拖尾（采样路径）以及当前位置加粗点。\n拖尾会在手雷爆炸/落地后按设定时间短暂留存。"))
+            {
+                gcfg.Enabled = gEnabled;
+                Config.MarkDirty();
+            }
+
+            if (gcfg.Enabled)
+            {
+                ImGui.Indent(16);
+
+                float gDist = gcfg.MaxDistance;
+                if (UIControls.StepperFloat(Chinese.E("Grenade Max Distance"), ref gDist, 20f, 1000f, 10f, "{0:0}m",
+                    "仅显示距离本地玩家此范围内的手雷轨迹和点。"))
+                {
+                    gcfg.MaxDistance = gDist;
+                    Config.MarkDirty();
+                }
+
+                float gLife = gcfg.TrailLifetime;
+                if (UIControls.StepperFloat(Chinese.E("Grenade Trail Lifetime"), ref gLife, 0.5f, 30f, 0.5f, "{0:0.0}s",
+                    "手雷拖尾和最终点在最后一次位置更新（或爆炸）后继续显示的秒数。\n这就是“拖尾并短暂留存”。"))
+                {
+                    gcfg.TrailLifetime = gLife;
+                    Config.MarkDirty();
+                }
+
+                float gDot = gcfg.DotRadius;
+                if (UIControls.StepperFloat(Chinese.E("Grenade Dot Size"), ref gDot, 1f, 15f, 0.5f, "{0:0.0}px",
+                    "手雷当前位置的加粗实心点半径。"))
+                {
+                    gcfg.DotRadius = gDot;
+                    Config.MarkDirty();
+                }
+
+                float gWidth = gcfg.TrailWidth;
+                if (UIControls.StepperFloat(Chinese.E("Grenade Trail Width"), ref gWidth, 0.5f, 10f, 0.25f, "{0:0.0}px",
+                    "轨迹拖尾线的描边宽度。"))
+                {
+                    gcfg.TrailWidth = gWidth;
                     Config.MarkDirty();
                 }
 

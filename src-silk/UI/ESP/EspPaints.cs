@@ -83,6 +83,48 @@ namespace eft_dma_radar.Silk.UI.ESP
 
         #endregion
 
+        #region Grenades (ESP trails + dots)
+
+        /// <summary>Actual sampled grenade flight trail (drag tail) — bright orange/yellow.</summary>
+        public static SKPaint GrenadeTrail { get; } = new()
+        {
+            Color = new SKColor(255, 185, 50, 210),
+            StrokeWidth = 2.2f,
+            Style = SKPaintStyle.Stroke,
+            IsAntialias = true,
+            StrokeJoin = SKStrokeJoin.Round,
+            StrokeCap = SKStrokeCap.Round,
+        };
+
+        /// <summary>Bold filled dot for current grenade position (the visual "hand雷").</summary>
+        public static SKPaint GrenadeDot { get; } = new()
+        {
+            Color = new SKColor(255, 210, 70, 245),
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true,
+        };
+
+        /// <summary>Predicted in-hand grenade throw arc (preview) — yellowish, slightly transparent.</summary>
+        public static SKPaint GrenadePrediction { get; } = new()
+        {
+            Color = new SKColor(255, 225, 90, 175),
+            StrokeWidth = 1.9f,
+            Style = SKPaintStyle.Stroke,
+            IsAntialias = true,
+            StrokeJoin = SKStrokeJoin.Round,
+            StrokeCap = SKStrokeCap.Round,
+        };
+
+        /// <summary>Landing marker for in-hand prediction.</summary>
+        public static SKPaint GrenadeLanding { get; } = new()
+        {
+            Color = new SKColor(255, 200, 40, 230),
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true,
+        };
+
+        #endregion
+
         #region Health Bar
 
         public static SKPaint HealthBarBg { get; } = new()
@@ -177,66 +219,6 @@ namespace eft_dma_radar.Silk.UI.ESP
         public static SKPaint TextLootImportant { get; } = MakeFillPaint(50, 255, 50, 240);
         public static SKPaint TextLootWishlist { get; } = MakeFillPaint(0, 230, 255, 240);
         public static SKPaint TextLootQuest { get; } = MakeFillPaint(255, 200, 50, 240);
-
-        #endregion
-
-        #region Corpses (for ESP overlay)
-
-        /// <summary>Corpse label text (brownish, matches radar corpse theme).</summary>
-        public static SKPaint TextCorpse { get; } = MakeFillPaint(200, 150, 80, 220);
-
-        /// <summary>Corpse X marker stroke.</summary>
-        public static SKPaint CorpseX { get; } = new()
-        {
-            Color = new SKColor(200, 150, 80, 220),
-            StrokeWidth = 1.8f,
-            Style = SKPaintStyle.Stroke,
-            StrokeCap = SKStrokeCap.Round,
-            IsAntialias = true,
-        };
-
-        /// <summary>Thicker black outline for corpse X for visibility.</summary>
-        public static SKPaint CorpseXOutline { get; } = new()
-        {
-            Color = new SKColor(0, 0, 0, 160),
-            StrokeWidth = 3.2f,
-            Style = SKPaintStyle.Stroke,
-            StrokeCap = SKStrokeCap.Round,
-            IsAntialias = true,
-        };
-
-        #endregion
-
-        #region Quest Zones (for ESP overlay, reuses radar quest paints where possible)
-
-        /// <summary>Quest zone label text (gold/amber like radar).</summary>
-        public static SKPaint TextQuest { get; } = MakeFillPaint(250, 200, 50, 240);
-
-        /// <summary>Quest zone marker fill (circle center).</summary>
-        public static SKPaint QuestMarker { get; } = new()
-        {
-            Color = new SKColor(250, 200, 50, 220),
-            Style = SKPaintStyle.Fill,
-            IsAntialias = true,
-        };
-
-        /// <summary>Quest zone outline stroke for polygons/lines.</summary>
-        public static SKPaint QuestOutline { get; } = new()
-        {
-            Color = new SKColor(250, 200, 50, 200),
-            StrokeWidth = 1.5f,
-            Style = SKPaintStyle.Stroke,
-            IsAntialias = true,
-        };
-
-        /// <summary>Black outline for quest markers for visibility.</summary>
-        public static SKPaint QuestMarkerOutline { get; } = new()
-        {
-            Color = new SKColor(0, 0, 0, 160),
-            StrokeWidth = 2.5f,
-            Style = SKPaintStyle.Stroke,
-            IsAntialias = true,
-        };
 
         #endregion
 

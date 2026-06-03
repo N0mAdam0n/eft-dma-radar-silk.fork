@@ -592,9 +592,6 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Max Distance"] = "最大距离",
             ["Loot"] = "物资",
             ["Show Loot"] = "显示物资",
-            ["Corpses"] = "尸体",
-            ["Show Corpses"] = "显示尸体",
-            ["Show Corpse Value"] = "显示尸体价值",
             ["Crosshair"] = "准星",
             ["Show Crosshair"] = "显示准星",
             ["Style"] = "样式",
@@ -615,6 +612,13 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Predicted Samples"] = "预测采样点",
             ["Predicted Max Distance"] = "预测最大距离",
             ["Live Shot Lifetime"] = "实时弹道持续时间",
+
+            ["Grenades (ESP)"] = "手雷 (透视)",
+            ["Enable Grenade ESP"] = "启用手雷轨迹",
+            ["Grenade Max Distance"] = "手雷显示范围",
+            ["Grenade Trail Lifetime"] = "手雷拖尾留存时间",
+            ["Grenade Dot Size"] = "手雷点大小",
+            ["Grenade Trail Width"] = "手雷轨迹线宽",
 
             // PlayersTab / Aimview settings (reused where possible)
             ["渲染"] = "渲染",

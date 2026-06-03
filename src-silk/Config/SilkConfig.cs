@@ -142,6 +142,38 @@ namespace eft_dma_radar.Silk.Config
     }
 
     /// <summary>
+    /// ESP grenade trajectory (drag tail + bold dot) settings.
+    /// The trail is the *actual* path sampled from live grenade positions (not a prediction).
+    /// Trails remain visible for a short time after the grenade detonates/lands (user-settable retention).
+    /// Settings live under 透视设置 (EspTab).
+    /// </summary>
+    public sealed class EspGrenadeConfig
+    {
+        /// <summary>Master switch for grenade trails + dots on the ESP overlay.</summary>
+        [JsonPropertyName("enabled")]
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>Only grenades (or their lingering markers) within this world distance from local player are drawn.</summary>
+        [JsonPropertyName("maxDistance")]
+        public float MaxDistance { get; set; } = 250f;
+
+        /// <summary>
+        /// Seconds to keep the trail polyline + final bold dot visible after the grenade is no longer
+        /// being updated by the game (detonated, destroyed, or expired). This is the "briefly persist" / 拖尾留存时间.
+        /// </summary>
+        [JsonPropertyName("trailLifetime")]
+        public float TrailLifetime { get; set; } = 4.0f;
+
+        /// <summary>Radius (in viewport pixels) of the bold dot drawn at the grenade's current/last position.</summary>
+        [JsonPropertyName("dotRadius")]
+        public float DotRadius { get; set; } = 4.5f;
+
+        /// <summary>Skia stroke width for the trajectory trail line.</summary>
+        [JsonPropertyName("trailWidth")]
+        public float TrailWidth { get; set; } = 2.2f;
+    }
+
+    /// <summary>
     /// Minimal configuration for the Silk.NET radar.
     /// Loaded from / saved to a JSON file in %AppData%\eft-dma-radar-silk\.
     /// </summary>
@@ -424,12 +456,6 @@ namespace eft_dma_radar.Silk.Config
 
         /// <summary>Maximum distance (meters) for ESP loot rendering.</summary>
         public float EspLootDistance { get; set; } = 100f;
-
-        /// <summary>Show corpse X markers + labels (name/value/distance) on the ESP overlay.</summary>
-        public bool EspShowCorpses { get; set; } = true;
-
-        /// <summary>Maximum distance (meters) for ESP corpse rendering.</summary>
-        public float EspCorpseDistance { get; set; } = 150f;
 
         /// <summary>Target monitor index (0-based) for the ESP window. 0 = primary monitor.</summary>
         public int EspTargetScreen { get; set; } = 0;
@@ -758,6 +784,9 @@ namespace eft_dma_radar.Silk.Config
         /// <summary>Ballistics simulation + debug overlay settings.</summary>
         public BallisticsConfig Ballistics { get; set; } = new();
 
+        /// <summary>ESP grenade trajectory (trails + dots) settings. See <see cref="EspGrenadeConfig"/>.</summary>
+        public EspGrenadeConfig EspGrenades { get; set; } = new();
+
         /// <summary>
         /// Seconds between full loot list refreshes. Default 10s — ground loot is static
         /// once spawned and the LootManager caches the resolved <c>LootItem</c> for the
@@ -849,11 +878,16 @@ namespace eft_dma_radar.Silk.Config
 
             EspPlayerDistance = Math.Clamp(EspPlayerDistance, 10f, 2000f);
             EspLootDistance = Math.Clamp(EspLootDistance, 10f, 500f);
-            EspCorpseDistance = Math.Clamp(EspCorpseDistance, 10f, 500f);
             EspRenderMode = Math.Clamp(EspRenderMode, 0, 3);
             EspCrosshairType = Math.Clamp(EspCrosshairType, 0, 5);
             EspCrosshairScale = Math.Clamp(EspCrosshairScale, 0.5f, 5f);
             EspTargetFps = Math.Clamp(EspTargetFps, 0, 360);
+
+            var g = EspGrenades ??= new EspGrenadeConfig();
+            g.MaxDistance = Math.Clamp(g.MaxDistance, 20f, 1000f);
+            g.TrailLifetime = Math.Clamp(g.TrailLifetime, 0.5f, 30f);
+            g.DotRadius = Math.Clamp(g.DotRadius, 1f, 15f);
+            g.TrailWidth = Math.Clamp(g.TrailWidth, 0.5f, 10f);
 
             LootMinPrice = Math.Max(LootMinPrice, 0);
             LootImportantPrice = Math.Max(LootImportantPrice, 0);

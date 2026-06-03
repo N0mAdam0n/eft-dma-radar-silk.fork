@@ -907,10 +907,16 @@ namespace eft_dma_radar.Silk.Tarkov.GameWorld
             try
             {
                 // Explosives: grenades, tripwires, mortar projectiles.
-                // Only consumed by RadarWindow.Render when Config.ShowExplosives is on —
-                // skip the DMA refresh entirely when the user has hidden the layer.
-                if (SilkProgram.Config.ShowExplosives)
+                // Refresh is forced if either radar explosives or ESP grenade trails are enabled.
+                // (ESP grenades need the manager for position history even if radar layer is off.)
+                bool wantExplosives = SilkProgram.Config.ShowExplosives ||
+                                      (SilkProgram.Config.EspGrenades?.Enabled ?? false);
+                if (wantExplosives)
                     _explosivesManager?.Refresh();
+
+                // Feed the ESP grenade trail accumulator (even if manager was not refreshed this tick).
+                // This keeps trails alive for the configured retention time and provides snapshots to the renderer.
+                GrenadeEspTracker.Instance.Feed(_explosivesManager);
 
                 // BTR vehicle tracking.
                 // Consumed by radar BTR marker (Config.ShowBTR) and ESP passenger-snap
