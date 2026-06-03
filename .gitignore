@@ -1,0 +1,100 @@
+# ───────────────────────────────────────────────────────────────────────────
+# .gitignore — EFT DMA Radar
+# Standard Visual Studio / .NET / C# ignore rules
+# ───────────────────────────────────────────────────────────────────────────
+
+# Visual Studio user-specific files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Ll]og/
+[Ll]ogs/
+
+# .NET / Roslyn
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.binlog
+*.tlog
+
+# MSBuild
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# JetBrains Rider / ReSharper
+.idea/
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Misc
+*.log
+*.tmp
+*.bak
+*.cache
+*.swp
+*.pidb
+*.svclog
+*.scc
+
+# Crash dumps / runtime
+crash.log
+*.dmp
+*.pdb.bak
+
+# Publish output
+publish/
+PublishScripts/
+*.pubxml
+*.pubxml.user
+*.publishproj
+
+# Coverage
+coverage/
+*.coverage
+*.coveragexml
+TestResults/
+
+# Local user config (do not check in real device strings, API keys, etc.)
+*.local.json
+secrets.json

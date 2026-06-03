@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EFT WebRadar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+
+<div id="root">
+  <canvas id="radar"></canvas>
+</div>
+
+<!-- Status badge -->
+<div id="status" class="warn">
+  <span class="dot"></span>
+  <span class="label">Connecting&hellip;</span>
+</div>
+
+<!-- Player count chips (bottom-left) -->
+<div id="playerCounts"></div>
+
+<!-- Hamburger -->
+<button id="menuBtn" title="Toggle sidebar">
+  <div class="lines" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+</button>
+
+<!-- Edge zone for hover-open -->
+<div id="edgeZone"></div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <header>
+    <div id="titlewrap">
+      <div id="title">EFT WebRadar</div>
+      <div id="subline" class="mono">waiting&hellip;</div>
+    </div>
+    <button id="toggle" title="Collapse">&lt;</button>
+  </header>
+
+  <div class="tabbar">
+    <div class="tab active" data-tab="players">Players</div>
+    <div class="tab" data-tab="loot">Loot</div>
+    <div class="tab" data-tab="containers">Containers</div>
+    <div class="tab" data-tab="quests">Quests</div>
+    <div class="tab" data-tab="world">World</div>
+    <div class="tab" data-tab="aimview">Aimview</div>
+    <div class="tab" data-tab="general">General</div>
+  </div>
+
+  <!-- ── Players Tab ── -->
+  <div class="tab-content active" id="players">
+    <div class="section">
+      <h3>Colors</h3>
+      <label>Local <input type="color" id="localColor"></label>
+      <label>Teammate <input type="color" id="teammateColor"></label>
+      <label>USEC / BEAR <input type="color" id="pmcColor"></label>
+      <label>Scav <input type="color" id="scavColor"></label>
+      <label>Player Scav <input type="color" id="pscavColor"></label>
+      <label>Raider <input type="color" id="raiderColor"></label>
+      <label>Boss <input type="color" id="bossColor"></label>
+      <label>Dead <input type="color" id="deadColor"></label>
+    </div>
+
+    <div class="section">
+      <h3>Display</h3>
+      <label>
+        Show Players
+        <span class="toggle-switch"><input type="checkbox" id="showPlayers"><span class="slider"></span></span>
+      </label>
+      <label>
+        Aim Lines
+        <span class="toggle-switch"><input type="checkbox" id="showAim"><span class="slider"></span></span>
+      </label>
+      <label>
+        Names
+        <span class="toggle-switch"><input type="checkbox" id="showNames"><span class="slider"></span></span>
+      </label>
+      <label>
+        Height Arrows
+        <span class="toggle-switch"><input type="checkbox" id="showHeight"><span class="slider"></span></span>
+      </label>
+      <label>
+        Group Lines
+        <span class="toggle-switch"><input type="checkbox" id="showGroups"><span class="slider"></span></span>
+      </label>
+      <label>
+        Player Size
+        <span class="range-wrap">
+          <input type="range" id="playerSize" min="2" max="10" step="1">
+          <span class="range-val" id="playerSizeVal">6</span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ── Loot Tab ── -->
+  <div class="tab-content" id="loot">
+    <div class="section">
+      <h3>Loot</h3>
+      <label>
+        Show Loot
+        <span class="toggle-switch"><input type="checkbox" id="showLoot"><span class="slider"></span></span>
+      </label>
+      <label>
+        Loot Names
+        <span class="toggle-switch"><input type="checkbox" id="showLootNames"><span class="slider"></span></span>
+      </label>
+      <label>
+        Search
+        <input type="text" id="lootSearch" placeholder="item name..." class="text-input" autocomplete="off" />
+      </label>
+      <label>
+        Display Mode
+        <select id="lootMode" class="text-input">
+          <option value="all">All (price filter)</option>
+          <option value="important">Important &amp; above</option>
+          <option value="rare">Rare tier (2×) &amp; above</option>
+          <option value="wishlist">Wishlist only</option>
+          <option value="quest">Quest only</option>
+        </select>
+      </label>
+      <label>
+        Min Price
+        <span class="range-wrap">
+          <input type="range" id="lootMinPrice" min="0" max="1000000" step="5000">
+          <span class="range-val" id="lootMinPriceVal">50K</span>
+        </span>
+      </label>
+      <div class="row loot-presets">
+        <button class="small" data-price="0">Any</button>
+        <button class="small" data-price="10000">10K</button>
+        <button class="small" data-price="50000">50K</button>
+        <button class="small" data-price="100000">100K</button>
+        <button class="small" data-price="200000">200K</button>
+        <button class="small" data-price="500000">500K</button>
+        <button class="small" data-price="1000000">1M</button>
+      </div>
+      <label>
+        Max Distance
+        <span class="range-wrap">
+          <input type="range" id="lootMaxDist" min="0" max="500" step="10">
+          <span class="range-val" id="lootMaxDistVal">Off</span>
+        </span>
+      </label>
+      <label>
+        Hide Normal (keep Important / Wishlist / Quest)
+        <span class="toggle-switch"><input type="checkbox" id="lootHideNormal"><span class="slider"></span></span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>Importance Tiers</h3>
+      <p class="hint">Buddy-side thresholds — independent of host settings.</p>
+      <label>
+        Important Price
+        <span class="range-wrap">
+          <input type="range" id="lootImportantPrice" min="0" max="500000" step="5000">
+          <span class="range-val" id="lootImportantPriceVal">50K</span>
+        </span>
+      </label>
+      <label>
+        Rare Multiplier
+        <span class="range-wrap">
+          <input type="range" id="lootRareMult" min="1" max="10" step="1">
+          <span class="range-val" id="lootRareMultVal">2×</span>
+        </span>
+      </label>
+      <label>
+        Top Multiplier
+        <span class="range-wrap">
+          <input type="range" id="lootTopMult" min="2" max="20" step="1">
+          <span class="range-val" id="lootTopMultVal">5×</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>Wishlist &amp; Blacklist</h3>
+      <p class="hint">Search the item database to add items. Wishlisted items bypass price/min filters; blacklisted items are always hidden.</p>
+      <label>
+        Add Items
+        <input type="text" id="itemSearch" placeholder="search items..." class="text-input" autocomplete="off" />
+      </label>
+      <div class="container-list" id="itemSearchResults"></div>
+      <div class="row">
+        <button class="small" id="wishlistClear">Clear Wishlist</button>
+        <button class="small" id="blacklistClear">Clear Blacklist</button>
+      </div>
+      <details class="container-select" open>
+        <summary>★ Wishlist <span class="badge mono" id="wishlistBadge">0</span></summary>
+        <div class="container-list" id="wishlistList"></div>
+      </details>
+      <details class="container-select" open>
+        <summary>✕ Blacklist <span class="badge mono" id="blacklistBadge">0</span></summary>
+        <div class="container-list" id="blacklistList"></div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h3>Colors</h3>
+      <label>Loot <input type="color" id="lootColor"></label>
+      <label>Important <input type="color" id="lootImportantColor"></label>
+      <label>Rare (2×) <input type="color" id="lootRareColor"></label>
+      <label>Top (5×) <input type="color" id="lootTopColor"></label>
+      <label>Wishlist <input type="color" id="lootWishlistColor"></label>
+      <label>Quest <input type="color" id="lootQuestColor"></label>
+    </div>
+  </div>
+
+  <!-- ── Containers Tab ── -->
+  <div class="tab-content" id="containers">
+    <div class="section">
+      <h3>Containers</h3>
+      <label>
+        Show Containers
+        <span class="toggle-switch"><input type="checkbox" id="showContainers"><span class="slider"></span></span>
+      </label>
+      <label>
+        Container Names
+        <span class="toggle-switch"><input type="checkbox" id="showContainerNames"><span class="slider"></span></span>
+      </label>
+      <label>
+        Max Distance
+        <span class="range-wrap">
+          <input type="range" id="containerMaxDist" min="0" max="500" step="10">
+          <span class="range-val" id="containerMaxDistVal">Off</span>
+        </span>
+      </label>
+      <details class="container-select" open>
+        <summary>Select Containers</summary>
+        <div class="row" id="containerBtns"></div>
+        <div class="container-list" id="containerList"></div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h3>Colors</h3>
+      <label>Container <input type="color" id="containerColor"></label>
+    </div>
+  </div>
+
+  <!-- ── Quests Tab ── -->
+  <div class="tab-content" id="quests">
+    <div class="section">
+      <h3>Tracked Quests</h3>
+      <label>
+        Show Tracked Quest Items
+        <span class="toggle-switch"><input type="checkbox" id="showQuestItems"><span class="slider"></span></span>
+      </label>
+      <label>
+        Show All Map Quest Items
+        <span class="toggle-switch"><input type="checkbox" id="showAllQuestItems"><span class="slider"></span></span>
+      </label>
+      <label>
+        Show Quest Zones
+        <span class="toggle-switch"><input type="checkbox" id="showQuestZones"><span class="slider"></span></span>
+      </label>
+      <label>
+        Only Active Map
+        <span class="toggle-switch"><input type="checkbox" id="questsOnlyActiveMap"><span class="slider"></span></span>
+      </label>
+      <label>
+        Filter
+        <input type="text" id="questSearch" placeholder="quest, item or trader..." class="text-input" autocomplete="off" />
+      </label>
+      <div class="row">
+        <button class="small" id="questsTrackKappa">Track Kappa</button>
+        <button class="small" id="questsClear">Clear All</button>
+        <span class="badge mono" id="questsBadge">0 / 0</span>
+      </div>
+      <details class="container-select" open>
+        <summary>Quests</summary>
+        <div class="container-list" id="questList"></div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h3>Colors</h3>
+      <label>Quest Item <input type="color" id="questItemColor"></label>
+      <label>Quest Zone <input type="color" id="questZoneColor"></label>
+    </div>
+  </div>
+
+  <!-- ── World Tab ── -->
+  <div class="tab-content" id="world">
+    <div class="section">
+      <h3>Exfils &amp; Corpses</h3>
+      <label>
+        Show Exfils
+        <span class="toggle-switch"><input type="checkbox" id="showExfils"><span class="slider"></span></span>
+      </label>
+      <label>
+        Show Corpses
+        <span class="toggle-switch"><input type="checkbox" id="showCorpses"><span class="slider"></span></span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>Map Features</h3>
+      <label>
+        Switches
+        <span class="toggle-switch"><input type="checkbox" id="showSwitches"><span class="slider"></span></span>
+      </label>
+      <label>
+        Doors (keyed)
+        <span class="toggle-switch"><input type="checkbox" id="showDoors"><span class="slider"></span></span>
+      </label>
+      <label>
+        Transits
+        <span class="toggle-switch"><input type="checkbox" id="showTransits"><span class="slider"></span></span>
+      </label>
+      <label>
+        BTR
+        <span class="toggle-switch"><input type="checkbox" id="showBtr"><span class="slider"></span></span>
+      </label>
+      <label>
+        BTR Stops
+        <span class="toggle-switch"><input type="checkbox" id="showBtrRoute"><span class="slider"></span></span>
+      </label>
+      <label>
+        Airdrops
+        <span class="toggle-switch"><input type="checkbox" id="showAirdrops"><span class="slider"></span></span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>Colors</h3>
+      <label>Switch <input type="color" id="switchColor"></label>
+      <label>Door (locked) <input type="color" id="doorLockedColor"></label>
+      <label>Door (open) <input type="color" id="doorOpenColor"></label>
+      <label>Transit <input type="color" id="transitColor"></label>
+      <label>BTR <input type="color" id="btrColor"></label>
+      <label>Airdrop <input type="color" id="airdropColor"></label>
+      <label>Corpse <input type="color" id="corpseColor"></label>
+      <label>Exfil Open <input type="color" id="exfilOpenColor"></label>
+      <label>Exfil Pending <input type="color" id="exfilPendingColor"></label>
+      <label>Exfil Closed <input type="color" id="exfilClosedColor"></label>
+    </div>
+  </div>
+
+  <!-- ── Aimview Tab ── -->
+  <div class="tab-content" id="aimview">
+    <div class="section">
+      <h3>Aimview</h3>
+      <label>
+        Enable Aimview
+        <span class="toggle-switch"><input type="checkbox" id="showAimview"><span class="slider"></span></span>
+      </label>
+      <p class="hint">First-person projection from the followed player. Drag the widget to reposition.</p>
+    </div>
+
+    <div class="section">
+      <h3>Layout</h3>
+      <p class="hint">Resize the widget by dragging its edges or corners.</p>
+      <label>
+        Zoom (FOV)
+        <span class="range-wrap">
+          <input type="range" id="aimviewZoom" min="0.5" max="4" step="0.1">
+          <span class="range-val" id="aimviewZoomVal">1.0×</span>
+        </span>
+      </label>
+      <label>
+        Horizontal FOV (°)
+        <span class="range-wrap">
+          <input type="range" id="aimviewFov" min="30" max="140" step="1">
+          <span class="range-val" id="aimviewFovVal">90°</span>
+        </span>
+      </label>
+      <label>
+        Use FOV (override Zoom)
+        <span class="toggle-switch"><input type="checkbox" id="aimviewUseFov"><span class="slider"></span></span>
+      </label>
+      <label>
+        Mirror Host FOV (auto-zoom on ADS)
+        <span class="toggle-switch"><input type="checkbox" id="aimviewFollowHostFov"><span class="slider"></span></span>
+      </label>
+      <label>
+        Scope Zoom (when host scoped)
+        <span class="range-wrap">
+          <input type="range" id="aimviewScopeZoom" min="1" max="12" step="0.5">
+          <span class="range-val" id="aimviewScopeZoomVal">4.0×</span>
+        </span>
+      </label>
+      <label>
+        Show Aim Status (ADS / SCOPE)
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowAimStatus"><span class="slider"></span></span>
+      </label>
+      <label>
+        Viewport Aspect
+        <select id="aimviewAspect">
+          <option value="auto">Auto (canvas)</option>
+          <option value="1.7777778">16:9 (1.78)</option>
+          <option value="1.6">16:10 (1.60)</option>
+          <option value="2.3703704">21:9 (2.37)</option>
+          <option value="1.3333333">4:3 (1.33)</option>
+        </select>
+      </label>
+      <label>
+        Eye Height
+        <span class="range-wrap">
+          <input type="range" id="aimviewEyeHeight" min="0.8" max="2.0" step="0.05">
+          <span class="range-val" id="aimviewEyeHeightVal">1.35</span>
+        </span>
+      </label>
+      <label>
+        Background Opacity
+        <span class="range-wrap">
+          <input type="range" id="aimviewBgOpacity" min="0" max="100" step="5">
+          <span class="range-val" id="aimviewBgOpacityVal">60%</span>
+        </span>
+      </label>
+      <label>
+        Show Crosshair
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowCrosshair"><span class="slider"></span></span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>Players</h3>
+      <label>
+        Show Players
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowPlayers"><span class="slider"></span></span>
+      </label>
+      <label>
+        Hide AI / Bots
+        <span class="toggle-switch"><input type="checkbox" id="aimviewHideAI"><span class="slider"></span></span>
+      </label>
+      <label>
+        Hide Dead
+        <span class="toggle-switch"><input type="checkbox" id="aimviewHideDead"><span class="slider"></span></span>
+      </label>
+      <label>
+        Show Names &amp; Distance
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowLabels"><span class="slider"></span></span>
+      </label>
+      <label>
+        Player Render Distance
+        <span class="range-wrap">
+          <input type="range" id="aimviewPlayerDist" min="50" max="800" step="10">
+          <span class="range-val" id="aimviewPlayerDistVal">300m</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>Loot &amp; Containers</h3>
+      <label>
+        Show Loot
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowLoot"><span class="slider"></span></span>
+      </label>
+      <label>
+        Show Containers
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowContainers"><span class="slider"></span></span>
+      </label>
+      <label>
+        Show Corpses
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowCorpses"><span class="slider"></span></span>
+      </label>
+      <label>
+        Loot/Container Distance
+        <span class="range-wrap">
+          <input type="range" id="aimviewLootDist" min="20" max="300" step="5">
+          <span class="range-val" id="aimviewLootDistVal">100m</span>
+        </span>
+      </label>
+      <label>
+        Item Labels
+        <span class="toggle-switch"><input type="checkbox" id="aimviewShowItemLabels"><span class="slider"></span></span>
+      </label>
+      <label>
+        Max Loot Markers
+        <span class="range-wrap">
+          <input type="range" id="aimviewMaxLoot" min="5" max="200" step="5">
+          <span class="range-val" id="aimviewMaxLootVal">40</span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ── General Tab ── -->
+  <div class="tab-content" id="general">
+    <div class="section">
+      <h3>Map</h3>
+      <label>
+        Show Map
+        <span class="toggle-switch"><input type="checkbox" id="showMap"><span class="slider"></span></span>
+      </label>
+      <label>
+        Satellite Map
+        <span class="toggle-switch"><input type="checkbox" id="useSatellite"><span class="slider"></span></span>
+      </label>
+      <p class="hint">Use satellite tiles from assets.tarkov.dev when available. Falls back to SVG for unsupported maps. Independent of the host's setting.</p>
+      <label>
+        Zoom
+        <span class="range-wrap">
+          <input type="range" id="zoom" min="0.05" max="4" step="0.05">
+          <span class="range-val" id="zoomVal">1.0</span>
+        </span>
+      </label>
+      <label>
+        Rotate With Local
+        <span class="toggle-switch"><input type="checkbox" id="rotateWithLocal"><span class="slider"></span></span>
+      </label>
+      <label>
+        Poll Rate
+        <span class="range-wrap">
+          <input type="range" id="pollMs" min="20" max="200" step="5">
+          <span class="range-val" id="pollMsVal">50<small>ms</small></span>
+        </span>
+      </label>
+      <label>
+        Free Mode
+        <span class="toggle-switch"><input type="checkbox" id="freeMode"><span class="slider"></span></span>
+      </label>
+      <div class="row">
+        <button class="small" id="centerOnLocal">Center on Local</button>
+        <span class="badge mono" id="modeBadge">follow</span>
+      </div>
+      <p class="hint">Double-click a player to follow them</p>
+    </div>
+
+    <div class="section">
+      <h3>UI</h3>
+      <label>
+        Hover-open Sidebar
+        <span class="toggle-switch"><input type="checkbox" id="hoverOpenSidebar"><span class="slider"></span></span>
+      </label>
+      <p class="hint">Aimview controls moved to their own tab.</p>
+    </div>
+
+    <div class="section">
+      <h3>Cache</h3>
+      <div class="row">
+        <button class="small" id="resetSettings">Reset Settings</button>
+        <span class="badge" id="cacheBadge">cache</span>
+      </div>
+      <div class="kv"><span>Map cache</span><span class="mono" id="mapCacheInfo">0</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     MOBILE-FIRST BOTTOM SHELL (Phase 5)
+     - Preset chip (top center)
+     - Bottom tab bar (Players · Loot · Layers · Settings)
+     - Bottom sheet (slides up from above tab bar, swipe-down to dismiss)
+     - FAB radial menu (mirrors desktop QuickMenu — long-press to open)
+     The existing right-side sidebar still works and is reachable from the
+     Settings sheet under "Advanced". On phone/tablet the sidebar starts
+     collapsed; the bottom shell is the primary path.
+     ───────────────────────────────────────────────────────────────────── -->
+
+<!-- Active preset chip (synced from /api/radar -> activePreset) -->
+<div id="presetChip" class="preset-chip" hidden>
+  <span class="preset-label">PRESET</span>
+  <span class="preset-name" id="presetName">—</span>
+</div>
+
+<!-- Bottom sheet (content swapped per tab) -->
+<div id="bottomSheet" class="bsheet" hidden>
+  <div id="bsheetGrabber" class="bsheet-grabber" aria-hidden="true">
+    <span class="grabber-bar"></span>
+  </div>
+  <div class="bsheet-head">
+    <span id="bsheetTitle" class="bsheet-title">Players</span>
+    <button class="bsheet-close" id="bsheetClose" title="Close">×</button>
+  </div>
+  <div id="bsheetBody" class="bsheet-body"></div>
+</div>
+
+<!-- FAB radial menu (bottom-right, above tab bar) -->
+<button id="fab" class="fab" title="Quick toggles">
+  <span class="fab-icon">⚡</span>
+</button>
+<div id="radialOverlay" class="radial-overlay" hidden>
+  <div id="radialMenu" class="radial-menu" role="menu"></div>
+</div>
+
+<!-- Bottom tab bar (always visible) -->
+<nav id="bottomBar" class="bottom-bar" aria-label="Primary">
+  <button class="bb-tab" data-sheet="players">
+    <span class="bb-icon">👥</span>
+    <span class="bb-label">Players</span>
+  </button>
+  <button class="bb-tab" data-sheet="loot">
+    <span class="bb-icon">◆</span>
+    <span class="bb-label">Loot</span>
+  </button>
+  <button class="bb-tab" data-sheet="layers">
+    <span class="bb-icon">▦</span>
+    <span class="bb-label">Layers</span>
+  </button>
+  <button class="bb-tab" data-sheet="settings">
+    <span class="bb-icon">⚙</span>
+    <span class="bb-label">Settings</span>
+  </button>
+</nav>
+
+<!-- Aimview widget (floating, draggable) -->
+<div id="aimviewWidget" class="aimview hidden">
+  <div id="aimviewHeader" class="aimview-header" title="Drag to move">
+    <span class="aimview-title">Aimview</span>
+    <span class="aimview-grip">⋮⋮</span>
+  </div>
+  <canvas id="aimviewCanvas"></canvas>
+  <div class="aimview-resize aimview-resize-n"  data-resize="n"></div>
+  <div class="aimview-resize aimview-resize-s"  data-resize="s"></div>
+  <div class="aimview-resize aimview-resize-e"  data-resize="e"></div>
+  <div class="aimview-resize aimview-resize-w"  data-resize="w"></div>
+  <div class="aimview-resize aimview-resize-ne" data-resize="ne"></div>
+  <div class="aimview-resize aimview-resize-nw" data-resize="nw"></div>
+  <div class="aimview-resize aimview-resize-se" data-resize="se"></div>
+  <div class="aimview-resize aimview-resize-sw" data-resize="sw"></div>
+</div>
+
+<!-- Tooltip (populated via JS) -->
+<div id="tooltip" class="tooltip hidden"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
