@@ -23,6 +23,7 @@ namespace eft_dma_radar.Silk.Misc
     public static class Log
     {
         private static StreamWriter? _fileWriter;
+        private static StreamWriter? _troubleWriter;
         private static bool _consoleAllocated;
         private static readonly Lock _writeLock = new();
         private static ConsoleColor _currentColor = ConsoleColor.Gray;
@@ -36,6 +37,33 @@ namespace eft_dma_radar.Silk.Misc
         static Log()
         {
             AllocateConsole();
+
+            // Always initialize a persistent troubleshooting log.
+            // This helps diagnose issues on other PCs even if the app crashes very early.
+            try
+            {
+                string troublePath = Path.Combine(AppContext.BaseDirectory, "eft-dma-radar.log");
+                var fs = new FileStream(troublePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                _troubleWriter = new StreamWriter(fs, Encoding.UTF8, 0x1000) { AutoFlush = true };
+
+                _troubleWriter.WriteLine("========================================");
+                _troubleWriter.WriteLine($"[{DateTime.UtcNow:u}] === EFT DMA Radar session started ===");
+                _troubleWriter.WriteLine($"[{DateTime.UtcNow:u}] .NET Runtime: {Environment.Version}");
+                _troubleWriter.WriteLine($"[{DateTime.UtcNow:u}] OS: {Environment.OSVersion} | 64bit: {Environment.Is64BitProcess}");
+                _troubleWriter.WriteLine($"[{DateTime.UtcNow:u}] BaseDirectory: {AppContext.BaseDirectory}");
+                _troubleWriter.WriteLine($"[{DateTime.UtcNow:u}] CommandLine: {Environment.CommandLine}");
+                _troubleWriter.WriteLine($"[{DateTime.UtcNow:u}] Process: {Environment.ProcessPath ?? "unknown"}");
+
+                AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+                {
+                    var w = Interlocked.Exchange(ref _troubleWriter, null);
+                    w?.Dispose();
+                };
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Log] Failed to init trouble log: {ex.Message}");
+            }
 
             string[] args = Environment.GetCommandLineArgs();
             if (args?.Contains("-logging", StringComparer.OrdinalIgnoreCase) ?? false)
@@ -141,6 +169,7 @@ namespace eft_dma_radar.Silk.Misc
             }
 
             _fileWriter?.WriteLine(formatted);
+            _troubleWriter?.WriteLine(formatted);
         }
 
         #endregion

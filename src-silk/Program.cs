@@ -57,6 +57,10 @@ namespace eft_dma_radar.Silk
         {
             try
             {
+                Log.WriteLine("[SilkProgram] === Main entry point reached ===");
+                Log.WriteLine($"[SilkProgram] Working directory: {Environment.CurrentDirectory}");
+                Log.WriteLine($"[SilkProgram] App base directory: {AppContext.BaseDirectory}");
+
                 Config = SilkConfig.Load();
                 Log.WriteLine("[SilkProgram] Config loaded OK.");
 
@@ -77,7 +81,9 @@ namespace eft_dma_radar.Silk
                 ExceptionTracer.Install();
 
                 SetHighPerformanceMode();
+                Log.WriteLine("[SilkProgram] High performance mode setup completed (or skipped).");
 
+                Log.WriteLine("[SilkProgram] Starting Memory module initialization (critical DMA step)...");
                 Memory.ModuleInit(Config);
                 Memory.GameStarted += (_, _) => ProfileService.Start();
                 Memory.GameStopped += (_, _) => ProfileService.Stop();
@@ -134,6 +140,18 @@ namespace eft_dma_radar.Silk
                 InputManager.Shutdown();
                 Memory.Close();
             }
+
+            // In debug mode (-debug or config), keep the console open so users can read logs
+            // even on normal exit or after troubleshooting messages.
+            if (Log.EnableDebugLogging)
+            {
+                try
+                {
+                    Log.WriteLine("[SilkProgram] Debug mode - press any key to close this console window...");
+                    Console.ReadKey(true);
+                }
+                catch { }
+            }
         }
 
         /// <summary>
@@ -170,14 +188,42 @@ namespace eft_dma_radar.Silk
         {
             string error = $"FATAL ERROR -> {ex}";
             Log.WriteLine(error);
-            try { File.WriteAllText("crash.log", $"[{DateTime.Now:u}] {error}"); }
+
+            // Always write a prominent crash.log for easy finding
+            try
+            {
+                File.WriteAllText("crash.log", $"[{DateTime.Now:u}] {error}\r\n\r\nFull stack:\r\n{ex}");
+            }
             catch { }
+
+            // Also append to the main trouble log
+            Log.WriteLine("=== FATAL ERROR - See eft-dma-radar.log and crash.log for details ===");
 
             // Show a message box so users on other PCs can actually see the error
             // (the app is GUI-only and closes too fast for console output).
             try
             {
                 MessageBoxW(0, error, "EFT DMA Radar - 致命错误", 0x10 /* MB_ICONERROR */);
+            }
+            catch { }
+
+            // Try hard to keep the console window open for troubleshooting.
+            // This helps when sending builds to other people.
+            try
+            {
+                Log.WriteLine("");
+                Log.WriteLine("=== TROUBLESHOOTING ===");
+                Log.WriteLine("A detailed log has been written to 'eft-dma-radar.log' (in the same folder as the exe).");
+                Log.WriteLine("A 'crash.log' was also created with the fatal error.");
+                Log.WriteLine("Check these two files first.");
+                Log.WriteLine("");
+                Log.WriteLine("Press any key to exit (console may need to be focused)...");
+
+                // Force console if possible
+                try { Console.ReadKey(intercept: true); } catch { }
+
+                // Extra sleep in case ReadKey fails silently
+                Thread.Sleep(15000);
             }
             catch { }
 
