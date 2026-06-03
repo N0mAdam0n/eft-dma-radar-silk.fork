@@ -871,6 +871,21 @@ namespace eft_dma_radar.Silk.Config
             HandsRefreshFarMul = Math.Clamp(HandsRefreshFarMul, HandsRefreshMidMul, 20f);
 
             Hotkeys ??= [];
+
+            // Seed a default hotkey for toggling the ESP overlay.
+            // This is especially important because when the ESP window is fullscreen/borderless
+            // on the radar PC, the user may not be able to easily use mouse/ImGui to close it.
+            // The hotkey is read via DMA from the *game* PC's keyboard, so it works even when
+            // the ESP window covers the radar PC screen.
+            if (!Hotkeys.ContainsKey("ToggleEspWindow") || Hotkeys["ToggleEspWindow"].Key < 1)
+            {
+                Hotkeys["ToggleEspWindow"] = new HotkeyEntry
+                {
+                    Enabled = true,
+                    Key = VK.F2, // F2 key (works via DMA even when ESP window covers the radar screen)
+                    Mode = HotkeyMode.Toggle,
+                };
+            }
             SelectedContainers ??= [];
             QuestBlacklist ??= [];
             MapCalibrationOverrides ??= new(StringComparer.OrdinalIgnoreCase);
@@ -900,13 +915,12 @@ namespace eft_dma_radar.Silk.Config
         /// </summary>
         public static SilkConfig Load()
         {
-            SilkConfig cfg;
             try
             {
                 if (File.Exists(_configPath))
                 {
                     var json = File.ReadAllText(_configPath);
-                    cfg = JsonSerializer.Deserialize<SilkConfig>(json) ?? new SilkConfig();
+                    var cfg = JsonSerializer.Deserialize<SilkConfig>(json) ?? new SilkConfig();
                     cfg.Validate();
                     Log.WriteLine("[SilkConfig] Config loaded OK.");
                     return cfg;
@@ -918,7 +932,9 @@ namespace eft_dma_radar.Silk.Config
             }
 
             Log.WriteLine("[SilkConfig] No config found, using defaults.");
-            return new SilkConfig();
+            var defaultCfg = new SilkConfig();
+            defaultCfg.Validate();
+            return defaultCfg;
         }
 
         /// <summary>
