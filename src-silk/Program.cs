@@ -139,8 +139,15 @@ namespace eft_dma_radar.Silk
         /// <summary>
         /// Sets High Performance mode: process priority, timer resolution, power plan, and MMCSS thread characteristics.
         /// </summary>
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         private static void SetHighPerformanceMode()
         {
+            if (!System.OperatingSystem.IsWindows())
+            {
+                Log.WriteLine("[SilkProgram] High performance mode skipped (not running on Windows).");
+                return;
+            }
+
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
 
             if (SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS | EXECUTION_STATE.ES_SYSTEM_REQUIRED | EXECUTION_STATE.ES_DISPLAY_REQUIRED) == 0)
@@ -171,6 +178,7 @@ namespace eft_dma_radar.Silk
         #region P/Invoke
 
         [LibraryImport("kernel32.dll", SetLastError = true)]
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         private static partial EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
 
         [Flags]
@@ -182,12 +190,15 @@ namespace eft_dma_radar.Silk
         }
 
         [LibraryImport("avrt.dll", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         private static partial nint AvSetMmThreadCharacteristicsW(string taskName, out uint taskIndex);
 
         [LibraryImport("powrprof.dll", SetLastError = true)]
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         private static partial uint PowerSetActiveScheme(nint userRootPowerKey, ref Guid schemeGuid);
 
         [LibraryImport("winmm.dll", EntryPoint = "timeBeginPeriod", SetLastError = true)]
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         private static partial uint TimeBeginPeriod(uint uMilliseconds);
 
         #endregion

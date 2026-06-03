@@ -8,6 +8,7 @@ namespace eft_dma_radar.Silk.Misc
     /// Enumerates physical displays on the local machine via Win32 EnumDisplayMonitors.
     /// Used to position the ESP window on the correct monitor.
     /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
     internal sealed class MonitorInfo
     {
         public int Index { get; set; }
@@ -52,8 +53,18 @@ namespace eft_dma_radar.Silk.Misc
         #endregion
 
         /// <summary>Returns all connected monitors ordered by enumeration index.</summary>
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         public static List<MonitorInfo> GetAllMonitors()
         {
+            if (!System.OperatingSystem.IsWindows())
+            {
+                // Fallback for non-Windows dev builds
+                return new List<MonitorInfo>
+                {
+                    new MonitorInfo { Index = 0, Width = 1920, Height = 1080, Left = 0, Top = 0, IsPrimary = true }
+                };
+            }
+
             var monitors = new List<MonitorInfo>();
             int index = 0;
 
@@ -101,6 +112,7 @@ namespace eft_dma_radar.Silk.Misc
         }
 
         /// <summary>Returns the monitor at <paramref name="index"/>, falling back to primary.</summary>
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         public static MonitorInfo GetMonitor(int index)
         {
             var all = GetAllMonitors();

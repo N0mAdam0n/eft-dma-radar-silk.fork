@@ -127,7 +127,7 @@ namespace eft_dma_radar.Silk.UI.ESP
                 options.UpdatesPerSecond = Config.EspTargetFps;
                 options.PreferredStencilBufferBits = 8;
                 options.PreferredBitDepth = new Vector4D<int>(8, 8, 8, 8);
-                options.WindowBorder = WindowBorder.Resizable;
+                options.WindowBorder = WindowBorder.Hidden;
 
                 _window = SilkWindow.Create(options);
                 _window.Load += OnLoad;
@@ -1046,6 +1046,7 @@ namespace eft_dma_radar.Silk.UI.ESP
                 var m = MonitorInfo.GetMonitor(Config.EspTargetScreen);
                 _window.Size = new Vector2D<int>(m.Width, m.Height);
                 _window.Position = new Vector2D<int>(m.Left, m.Top);
+                _window.WindowBorder = WindowBorder.Hidden; // ensure borderless for true fullscreen coverage
                 Log.WriteLine($"[EspWindow] Moved to Monitor {m.Index + 1} ({m.Width}x{m.Height} @ {m.Left},{m.Top})");
             }
             catch { }

@@ -20,9 +20,12 @@
     </ItemGroup>
 
     <!-- Embedded Resources (fonts + data) -->
+    <!-- IMPORTANT: Use "Resources" (capital R) to match the actual directory name on disk.
+         Using lowercase "resources" works accidentally on Windows (case-insensitive FS)
+         but fails on Linux / case-sensitive filesystems when embedding the resource at compile time. -->
     <ItemGroup>
-        <EmbeddedResource Include="..\resources\NeoSansStdRegular.otf" />
-        <EmbeddedResource Include="..\resources\DEFAULT_DATA.json" />
+        <EmbeddedResource Include="..\Resources\NeoSansStdRegular.otf" />
+        <EmbeddedResource Include="..\Resources\DEFAULT_DATA.json" />
     </ItemGroup>
 
     <!-- NuGet Packages -->

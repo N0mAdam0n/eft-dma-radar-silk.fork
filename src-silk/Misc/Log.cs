@@ -19,6 +19,7 @@ namespace eft_dma_radar.Silk.Misc
     /// Lightweight logger for the Silk radar. Console + optional file sink.
     /// Thread-safe.
     /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
     public static class Log
     {
         private static StreamWriter? _fileWriter;
@@ -54,6 +55,13 @@ namespace eft_dma_radar.Silk.Misc
         {
             if (_consoleAllocated)
                 return;
+
+            if (!System.OperatingSystem.IsWindows())
+            {
+                _consoleAllocated = true; // No console allocation on non-Windows (dev builds)
+                return;
+            }
+
             try
             {
                 if (GetConsoleWindow() == 0)

@@ -195,23 +195,34 @@ namespace eft_dma_radar.Silk.DMA
         /// </summary>
         public static void ModuleInit(SilkConfig config)
         {
+            if (!System.OperatingSystem.IsWindows())
+            {
+                Log.WriteLine("[Memory] Running on non-Windows (Linux dev mode). DMA features are disabled. UI and non-DMA subsystems can still be tested.");
+                // Leave Game, Players, etc. as null so the UI can render "waiting" states and allow panel testing.
+                return;
+            }
+
             Log.WriteLine("[Memory] Initializing DMA...");
 
             // Pre-flight: ensure the critical native LeechCore/MemProcFS DLLs are present next to the executable.
             // If these are missing the Vmm ctor will fail in confusing ways (or hang). This commonly happens
             // when accidentally launching the .exe straight from a source tree instead of a build output folder.
+            string baseDir = AppContext.BaseDirectory;
+            string vmmPath = Path.Combine(baseDir, "vmm.dll");
+            string lcPath = Path.Combine(baseDir, "leechcore.dll");
+
+            string vmmVer = "unknown";
+            string lcVer = "unknown";
+
             try
             {
-                string baseDir = AppContext.BaseDirectory;
-                string vmmPath = Path.Combine(baseDir, "vmm.dll");
-                string lcPath = Path.Combine(baseDir, "leechcore.dll");
                 if (!File.Exists(vmmPath))
                     throw new FileNotFoundException("vmm.dll not found next to executable.", vmmPath);
                 if (!File.Exists(lcPath))
                     throw new FileNotFoundException("leechcore.dll not found next to executable.", lcPath);
 
-                var vmmVer = FileVersionInfo.GetVersionInfo(vmmPath).FileVersion ?? "unknown";
-                var lcVer = FileVersionInfo.GetVersionInfo(lcPath).FileVersion ?? "unknown";
+                vmmVer = FileVersionInfo.GetVersionInfo(vmmPath).FileVersion ?? "unknown";
+                lcVer = FileVersionInfo.GetVersionInfo(lcPath).FileVersion ?? "unknown";
                 Log.WriteLine($"[Memory] Native libs OK. vmm.dll={vmmVer}  leechcore.dll={lcVer}");
             }
             catch (Exception preEx)
@@ -226,10 +237,7 @@ namespace eft_dma_radar.Silk.DMA
                     "构建时 VmmSharpEx 项目会自动把 lib\\VmmSharpEx\\native\\ 下的 dll 复制到输出目录。", preEx);
             }
 
-            var vmmVer2 = FileVersionInfo.GetVersionInfo("vmm.dll").FileVersion ?? "unknown";
-            var lcVer2 = FileVersionInfo.GetVersionInfo("leechcore.dll").FileVersion ?? "unknown";
-
-            Log.WriteLine($"[Memory] DeviceStr=\"{config.DeviceStr}\", MemMapEnabled={config.MemMapEnabled}");
+            Log.WriteLine($"[Memory] DeviceStr=\"{config.DeviceStr}\", MemMapEnabled={config.MemMapEnabled}, vmm.dll={vmmVer}, leechcore.dll={lcVer}");
 
             // Support "-nomemmap" (or "--nomemmap") on command line to skip the map generation step for this run only.
             // This is useful for troubleshooting: lets you test whether basic DMA device connection (the main Vmm creation)
@@ -342,7 +350,7 @@ namespace eft_dma_radar.Silk.DMA
                 string zhMsg =
                     "DMA 初始化失败！\n" +
                     $"原因: {ex.Message}\n" +
-                    $"vmm.dll 版本: {vmmVer2}   leechcore.dll 版本: {lcVer2}\n" +
+                    $"vmm.dll 版本: {vmmVer}   leechcore.dll 版本: {lcVer}\n" +
                     $"设备参数 DeviceStr: \"{config.DeviceStr}\"\n\n" +
                     "【重要】此版本为纯只读DMA雷达，【必须】使用真实DMA硬件卡 + 游戏端电脑才能工作。\n" +
                     "排查与解决步骤（请严格按顺序操作）：\n" +
@@ -362,7 +370,7 @@ namespace eft_dma_radar.Silk.DMA
                 string enMsg =
                     "DMA Initialization Failed!\n" +
                     $"Reason: {ex.Message}\n" +
-                    $"vmm: {vmmVer2}  leechcore: {lcVer2}\n" +
+                    $"vmm: {vmmVer}  leechcore: {lcVer}\n" +
                     $"DeviceStr: \"{config.DeviceStr}\"\n\n" +
                     "READ-ONLY DMA radar — real hardware card + game PC required.\n" +
                     "Troubleshooting (in order):\n" +
