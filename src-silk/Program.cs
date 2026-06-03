@@ -172,6 +172,15 @@ namespace eft_dma_radar.Silk
             Log.WriteLine(error);
             try { File.WriteAllText("crash.log", $"[{DateTime.Now:u}] {error}"); }
             catch { }
+
+            // Show a message box so users on other PCs can actually see the error
+            // (the app is GUI-only and closes too fast for console output).
+            try
+            {
+                MessageBoxW(0, error, "EFT DMA Radar - 致命错误", 0x10 /* MB_ICONERROR */);
+            }
+            catch { }
+
             Environment.FailFast(error);
         }
 
@@ -200,6 +209,10 @@ namespace eft_dma_radar.Silk
         [LibraryImport("winmm.dll", EntryPoint = "timeBeginPeriod", SetLastError = true)]
         [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
         private static partial uint TimeBeginPeriod(uint uMilliseconds);
+
+        [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
+        [System.Runtime.Versioning.SupportedOSPlatform("Windows")]
+        private static partial int MessageBoxW(nint hWnd, string lpText, string lpCaption, uint uType);
 
         #endregion
     }
