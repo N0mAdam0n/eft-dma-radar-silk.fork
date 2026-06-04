@@ -613,6 +613,10 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Predicted Max Distance"] = "预测最大距离",
             ["Live Shot Lifetime"] = "实时弹道持续时间",
 
+            ["Scaling"] = "缩放",
+            ["ESP UI Scale"] = "透视 UI 缩放",
+            ["ESP UI Scale Tooltip"] = "缩放透视窗口中所有UI元素的大小（玩家/物资标签、方框线宽、点/圆半径、状态栏、FPS、能量条、弹道轨迹、手雷拖尾等）。\n用于高分辨率显示器或远距离观看时UI太小的问题。准星有独立缩放设置。",
+
             ["Grenades (ESP)"] = "手雷 (透视)",
             ["Enable Grenade ESP"] = "启用手雷轨迹",
             ["Grenade Max Distance"] = "手雷显示范围",

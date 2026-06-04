@@ -439,6 +439,14 @@ namespace eft_dma_radar.Silk.Config
         /// <summary>Crosshair scale multiplier.</summary>
         public float EspCrosshairScale { get; set; } = 1f;
 
+        /// <summary>
+        /// General UI scale multiplier for the ESP overlay (affects font sizes, box/line widths,
+        /// dot radii, health/energy bar sizes, label offsets, grenade/ballistics elements etc.).
+        /// Helps with high-resolution setups or when elements feel too small on the overlay.
+        /// Crosshair has its own dedicated scale.
+        /// </summary>
+        public float EspUIScale { get; set; } = 1f;
+
         /// <summary>Show FPS counter in the top-left of the ESP window.</summary>
         public bool EspShowFps { get; set; } = true;
 
@@ -881,6 +889,7 @@ namespace eft_dma_radar.Silk.Config
             EspRenderMode = Math.Clamp(EspRenderMode, 0, 3);
             EspCrosshairType = Math.Clamp(EspCrosshairType, 0, 5);
             EspCrosshairScale = Math.Clamp(EspCrosshairScale, 0.5f, 5f);
+            EspUIScale = Math.Clamp(EspUIScale, 0.5f, 4f);
             EspTargetFps = Math.Clamp(EspTargetFps, 0, 360);
 
             var g = EspGrenades ??= new EspGrenadeConfig();

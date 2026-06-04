@@ -151,6 +151,16 @@ namespace eft_dma_radar.Silk.UI.Panels
                 ImGui.Unindent(16);
             }
 
+            UIControls.Section(Chinese.E("Scaling"));
+
+            float eUiScale = Config.EspUIScale;
+            if (UIControls.StepperFloat(Chinese.E("ESP UI Scale"), ref eUiScale, 0.5f, 4f, 0.1f, "{0:0.0}x",
+                Chinese.E("ESP UI Scale Tooltip")))
+            {
+                Config.EspUIScale = eUiScale;
+                Config.MarkDirty();
+            }
+
             UIControls.Section(Chinese.E("HUD"));
 
             bool showFps = Config.EspShowFps;

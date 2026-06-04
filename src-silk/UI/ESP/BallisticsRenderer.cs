@@ -26,9 +26,12 @@ namespace eft_dma_radar.Silk.UI.ESP
 
             var feature = BallisticsFeature.Instance;
 
-            // Configure paint widths from config (cheap — Skia caches the dirty flag itself).
-            EspPaints.PredictedTrajectory.StrokeWidth = cfg.LineWidth;
-            EspPaints.LiveShotTrail.StrokeWidth = cfg.LineWidth;
+            // Use the master ESP scale (SetEspScale called by EspWindow before renderer.Draw).
+            float ui = EspPaints.EspScale;
+
+            // Configure paint widths from config * master ESP UI scale (so general "UI缩放" affects ballistics too).
+            EspPaints.PredictedTrajectory.StrokeWidth = cfg.LineWidth * ui;
+            EspPaints.LiveShotTrail.StrokeWidth = cfg.LineWidth * ui;
 
             if (cfg.DrawPredictedTrajectory)
                 DrawPredictedTrajectory(canvas, feature.LocalTrajectory);
@@ -59,7 +62,7 @@ namespace eft_dma_radar.Silk.UI.ESP
             // Muzzle origin marker.
             var origin = points[0];
             if (IsFinite(origin) && CameraManager.WorldToScreen(ref origin, out var muzzle))
-                canvas.DrawCircle(muzzle.X, muzzle.Y, 3.5f, EspPaints.MuzzleDot);
+                canvas.DrawCircle(muzzle.X, muzzle.Y, 3.5f * EspPaints.EspScale, EspPaints.MuzzleDot);
         }
 
         private static void DrawLiveShots(SKCanvas canvas, LiveShot[] shots)
@@ -89,7 +92,7 @@ namespace eft_dma_radar.Silk.UI.ESP
                 // Bullet head dot.
                 var head = shot.CurrentPosition;
                 if (IsFinite(head) && CameraManager.WorldToScreen(ref head, out var headScr))
-                    canvas.DrawCircle(headScr.X, headScr.Y, 2.5f, EspPaints.LiveShotHead);
+                    canvas.DrawCircle(headScr.X, headScr.Y, 2.5f * EspPaints.EspScale, EspPaints.LiveShotHead);
             }
         }
 

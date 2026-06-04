@@ -51,6 +51,9 @@ namespace eft_dma_radar.Silk.UI.ESP
         // Sanity ceiling for distance (meters) — rejects garbage world positions
         private const float MaxSaneDistance = 2000f;
 
+        /// <summary>Effective scale for all ESP UI chrome (fonts, strokes, radii, offsets). Applied in addition to viewport projection.</summary>
+        private static float UiScale => Config?.EspUIScale ?? 1f;
+
         #endregion
 
         #region Properties
@@ -295,6 +298,10 @@ namespace eft_dma_radar.Silk.UI.ESP
                 var canvas = _skSurface.Canvas;
                 canvas.Clear(SKColors.Black);
 
+                // Apply current ESP UI scale (fonts + strokes + sizes). Live updates when changed from settings.
+                // Must be before any ESP-specific drawing (affects both viewport entities and window-space HUD).
+                EspPaints.SetEspScale(UiScale);
+
                 var localPlayer = Memory.LocalPlayer;
                 var allPlayers = Memory.Players;
 
@@ -516,9 +523,11 @@ namespace eft_dma_radar.Silk.UI.ESP
             float bottomY = MathF.Max(headScreen.Y, feetScreen.Y);
 
             int mode = Config.EspRenderMode;
-            bool drawBox = mode == 2 && boxHeight >= MinBoxHeight;
+            // Scale the min-box threshold inversely with UI scale: larger UI scale makes small projections more usable (thicker lines + bigger labels).
+            float minBoxH = MinBoxHeight / MathF.Max(0.1f, UiScale);
+            bool drawBox = mode == 2 && boxHeight >= minBoxH;
             bool drawBones = (mode == 1 || (mode == 2 && Config.EspShowBones)) && haveSkeleton;
-            bool drawHeadDot = mode == 3 || (mode == 2 && boxHeight < MinBoxHeight);
+            bool drawHeadDot = mode == 3 || (mode == 2 && boxHeight < minBoxH);
 
             SKRect box = default;
             if (drawBox)
@@ -537,7 +546,7 @@ namespace eft_dma_radar.Silk.UI.ESP
             }
             else if (drawHeadDot)
             {
-                canvas.DrawCircle(centerX, topY, 3f, boxPaint);
+                canvas.DrawCircle(centerX, topY, 3f * UiScale, boxPaint);
             }
 
             if (drawBones)
@@ -549,7 +558,7 @@ namespace eft_dma_radar.Silk.UI.ESP
             {
                 float nameWidth = EspPaints.FontName.MeasureText(name);
                 float nameX = centerX - nameWidth * 0.5f;
-                float nameY = topY - 4f;
+                float nameY = topY - 4f * UiScale;
                 canvas.DrawText(name, nameX + 1, nameY + 1, EspPaints.FontName, EspPaints.TextShadow);
                 canvas.DrawText(name, nameX, nameY, EspPaints.FontName, textPaint);
             }
@@ -557,7 +566,7 @@ namespace eft_dma_radar.Silk.UI.ESP
             string distText = $"{(int)distance}m";
             float distWidth = EspPaints.FontInfo.MeasureText(distText);
             float distX = centerX - distWidth * 0.5f;
-            float distY = bottomY + EspPaints.FontInfo.Size + 2f;
+            float distY = bottomY + EspPaints.FontInfo.Size + 2f * UiScale;
             canvas.DrawText(distText, distX + 1, distY + 1, EspPaints.FontInfo, EspPaints.TextShadow);
             canvas.DrawText(distText, distX, distY, EspPaints.FontInfo, textPaint);
         }
@@ -661,13 +670,15 @@ namespace eft_dma_radar.Silk.UI.ESP
         /// </summary>
         private static void DrawHealthBar(SKCanvas canvas, Player player, SKRect box)
         {
-            float barLeft = box.Left - HealthBarGap - HealthBarWidth;
+            float hbw = HealthBarWidth * UiScale;
+            float hbg = HealthBarGap * UiScale;
+            float barLeft = box.Left - hbg - hbw;
             float barTop = box.Top;
             float barBottom = box.Bottom;
             float barHeight = barBottom - barTop;
 
             // Background
-            canvas.DrawRect(barLeft, barTop, HealthBarWidth, barHeight, EspPaints.HealthBarBg);
+            canvas.DrawRect(barLeft, barTop, hbw, barHeight, EspPaints.HealthBarBg);
 
             // Health fill
             float healthPct = player.HealthStatus switch
@@ -687,7 +698,7 @@ namespace eft_dma_radar.Silk.UI.ESP
             };
 
             float fillHeight = barHeight * healthPct;
-            canvas.DrawRect(barLeft, barBottom - fillHeight, HealthBarWidth, fillHeight, healthPaint);
+            canvas.DrawRect(barLeft, barBottom - fillHeight, hbw, fillHeight, healthPaint);
         }
 
         /// <summary>
@@ -731,9 +742,10 @@ namespace eft_dma_radar.Silk.UI.ESP
 
         private static void DrawFpsOverlay(SKCanvas canvas)
         {
+            float s = UiScale;
             string fpsText = $"{_fps} FPS";
-            canvas.DrawText(fpsText, 7, 17, EspPaints.FontInfo, EspPaints.TextShadow);
-            canvas.DrawText(fpsText, 6, 16, EspPaints.FontInfo, EspPaints.TextBar);
+            canvas.DrawText(fpsText, 7 * s, 17 * s, EspPaints.FontInfo, EspPaints.TextShadow);
+            canvas.DrawText(fpsText, 6 * s, 16 * s, EspPaints.FontInfo, EspPaints.TextBar);
         }
 
         /// <summary>
@@ -745,11 +757,12 @@ namespace eft_dma_radar.Silk.UI.ESP
             if (size.X <= 0 || size.Y <= 0)
                 return;
 
-            float scale = Config.EspCrosshairScale;
+            float cscale = Config.EspCrosshairScale;
+            float ui = UiScale;
             float cx = size.X * 0.5f;
             float cy = size.Y * 0.5f;
-            float s = 10f * scale;
-            float dot = 3f * scale;
+            float s = 10f * ui * cscale;
+            float dot = 3f * ui * cscale;
 
             switch (Config.EspCrosshairType)
             {
@@ -798,10 +811,11 @@ namespace eft_dma_radar.Silk.UI.ESP
         private static void DrawEnergyHydration(SKCanvas canvas, LocalPlayer lp)
         {
             var size = _window!.Size;
-            const float barW = 150f;
-            const float barH = 12f;
-            const float spacing = 6f;
-            const float margin = 15f;
+            float s = UiScale;
+            float barW = 150f * s;
+            float barH = 12f * s;
+            float spacing = 6f * s;
+            float margin = 15f * s;
 
             float right = size.X - margin;
             float x = right - barW;

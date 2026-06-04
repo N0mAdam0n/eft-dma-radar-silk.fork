@@ -12,9 +12,9 @@ namespace eft_dma_radar.Silk.UI.ESP
     {
         #region Fonts
 
-        public static SKFont FontName { get; } = new(CustomFonts.Regular, 12) { Subpixel = true };
-        public static SKFont FontInfo { get; } = new(CustomFonts.Regular, 10) { Subpixel = true };
-        public static SKFont FontLoot { get; } = new(CustomFonts.Regular, 10) { Subpixel = true };
+        public static SKFont FontName { get; private set; } = new(CustomFonts.Regular, 12) { Subpixel = true };
+        public static SKFont FontInfo { get; private set; } = new(CustomFonts.Regular, 10) { Subpixel = true };
+        public static SKFont FontLoot { get; private set; } = new(CustomFonts.Regular, 10) { Subpixel = true };
 
         #endregion
 
@@ -272,7 +272,7 @@ namespace eft_dma_radar.Silk.UI.ESP
             IsAntialias = true,
         };
 
-        public static SKFont FontBar { get; } = new(CustomFonts.Regular, 11) { Subpixel = true };
+        public static SKFont FontBar { get; private set; } = new(CustomFonts.Regular, 11) { Subpixel = true };
 
         public static SKPaint TextBar { get; } = MakeFillPaint(255, 255, 255, 240);
 
@@ -280,9 +280,60 @@ namespace eft_dma_radar.Silk.UI.ESP
 
         #region Status Text
 
-        public static SKFont FontStatus { get; } = new(CustomFonts.Regular, 14) { Subpixel = true };
+        public static SKFont FontStatus { get; private set; } = new(CustomFonts.Regular, 14) { Subpixel = true };
 
         public static SKPaint TextStatus { get; } = MakeFillPaint(255, 220, 60, 240);
+
+        #endregion
+
+        #region ESP UI Scaling
+
+        /// <summary>Current effective UI scale for ESP (set via SetEspScale from EspWindow render).</summary>
+        public static float EspScale { get; private set; } = 1f;
+
+        /// <summary>
+        /// Updates all ESP-specific font sizes and stroke widths according to the given scale.
+        /// Call before drawing in EspWindow (cheap no-op if unchanged). Enables live "UI缩放" from settings.
+        /// </summary>
+        public static void SetEspScale(float scale)
+        {
+            scale = Math.Clamp(scale, 0.25f, 5f);
+            if (Math.Abs(EspScale - scale) < 0.001f)
+                return;
+
+            EspScale = scale;
+
+            // Recreate fonts at scaled size (text size is the main "too small" complaint)
+            FontName = new(CustomFonts.Regular, 12 * scale) { Subpixel = true };
+            FontInfo = new(CustomFonts.Regular, 10 * scale) { Subpixel = true };
+            FontLoot = new(CustomFonts.Regular, 10 * scale) { Subpixel = true };
+            FontBar = new(CustomFonts.Regular, 11 * scale) { Subpixel = true };
+            FontStatus = new(CustomFonts.Regular, 14 * scale) { Subpixel = true };
+
+            // Update mutable stroke widths on all relevant paints (fills don't need it)
+            BoxOutline.StrokeWidth = 3f * scale;
+            BoneLine.StrokeWidth = 1.2f * scale;
+            Crosshair.StrokeWidth = 2f * scale;
+            StatusBarBorder.StrokeWidth = 1f * scale;
+
+            // Player box paints (re-apply scaled stroke; creation used 1.5f base)
+            BoxUSEC.StrokeWidth = 1.5f * scale;
+            BoxBEAR.StrokeWidth = 1.5f * scale;
+            BoxPScav.StrokeWidth = 1.5f * scale;
+            BoxTeammate.StrokeWidth = 1.5f * scale;
+            BoxScav.StrokeWidth = 1.5f * scale;
+            BoxRaider.StrokeWidth = 1.5f * scale;
+            BoxBoss.StrokeWidth = 1.5f * scale;
+            BoxSpecial.StrokeWidth = 1.5f * scale;
+            BoxStreamer.StrokeWidth = 1.5f * scale;
+            BoxDefault.StrokeWidth = 1.5f * scale;
+
+            // Grenade / ballistics base strokes (their renderers will further adjust with per-cfg * EspScale)
+            GrenadeTrail.StrokeWidth = 2.2f * scale;
+            GrenadePrediction.StrokeWidth = 1.9f * scale;
+            PredictedTrajectory.StrokeWidth = 2.0f * scale;
+            LiveShotTrail.StrokeWidth = 2.0f * scale;
+        }
 
         #endregion
 

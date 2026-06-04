@@ -25,8 +25,10 @@ namespace eft_dma_radar.Silk.UI.ESP
             if (cfg is null || !cfg.Enabled) return;
             if (!CameraManager.IsActive) return;
 
-            // Live-update paint properties from config (Skia is cheap about this).
-            EspPaints.GrenadeTrail.StrokeWidth = cfg.TrailWidth;
+            float ui = EspPaints.EspScale; // set by outer EspWindow render before calling us
+
+            // Live-update paint properties from config * master ESP UI scale.
+            EspPaints.GrenadeTrail.StrokeWidth = cfg.TrailWidth * ui;
 
             // Draw actual grenade trails + bold dots from the tracker.
             var trails = GrenadeEspTracker.Instance.GetSnapshot();
@@ -79,10 +81,10 @@ namespace eft_dma_radar.Silk.UI.ESP
                 var cur = t.CurrentPosition;
                 if (IsFinite(cur) && CameraManager.WorldToScreen(ref cur, out var dot, onScreenCheck: false))
                 {
-                    float r = cfg.DotRadius;
+                    float r = cfg.DotRadius * EspPaints.EspScale;
                     canvas.DrawCircle(dot.X, dot.Y, r, EspPaints.GrenadeDot);
                     // Subtle outer ring for visibility (uses a stroke paint we already have).
-                    canvas.DrawCircle(dot.X, dot.Y, r + 1.5f, EspPaints.BoxOutline);
+                    canvas.DrawCircle(dot.X, dot.Y, r + 1.5f * EspPaints.EspScale, EspPaints.BoxOutline);
                 }
             }
         }
@@ -111,7 +113,7 @@ namespace eft_dma_radar.Silk.UI.ESP
             var land = arc.Landing;
             if (IsFinite(land) && CameraManager.WorldToScreen(ref land, out var lscr, onScreenCheck: false))
             {
-                canvas.DrawCircle(lscr.X, lscr.Y, 3.5f, EspPaints.GrenadeLanding);
+                canvas.DrawCircle(lscr.X, lscr.Y, 3.5f * EspPaints.EspScale, EspPaints.GrenadeLanding);
             }
         }
 
