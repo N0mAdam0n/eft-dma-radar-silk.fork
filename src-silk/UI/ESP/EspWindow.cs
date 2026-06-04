@@ -150,14 +150,6 @@ namespace eft_dma_radar.Silk.UI.ESP
 
                 _window = SilkWindow.Create(options);
 
-                // Create input context so the ESP window can receive local keyboard/mouse even when it is the focused window.
-                // This is the main "local escape hatch" for the fullscreen overlay scenario.
-                _input = _window.CreateInput();
-                foreach (var kb in _input.Keyboards)
-                    kb.KeyDown += OnEspKeyDown;
-                foreach (var m in _input.Mice)
-                    m.MouseDown += OnEspMouseDown;
-
                 _window.Load += OnLoad;
                 _window.Render += OnRender;
                 _window.Resize += OnResize;
@@ -172,6 +164,8 @@ namespace eft_dma_radar.Silk.UI.ESP
             finally
             {
                 _running = false;
+                try { _input?.Dispose(); } catch { }
+                _input = null;
                 _window = null;
                 _thread = null;
                 Log.WriteLine("[EspWindow] Thread exited.");
@@ -183,6 +177,16 @@ namespace eft_dma_radar.Silk.UI.ESP
             try
             {
                 _gl = GL.GetApi(_window!);
+
+                // Create input context here (inside OnLoad, after the window has started its loop),
+                // matching the pattern in RadarWindow. This allows local keyboard/mouse handlers
+                // for ESC/F2/click-to-close without relying on DMA.
+                // Doing it too early (right after Create) can throw or fail to initialize the input context.
+                _input = _window!.CreateInput();
+                foreach (var kb in _input.Keyboards)
+                    kb.KeyDown += OnEspKeyDown;
+                foreach (var m in _input.Mice)
+                    m.MouseDown += OnEspMouseDown;
 
                 var glInterface = GRGlInterface.Create(name =>
                     _window!.GLContext!.TryGetProcAddress(name, out var addr) ? addr : 0);

@@ -101,14 +101,13 @@ namespace eft_dma_radar.Silk.UI.Controls
         /// remote use and auto-repeat while held (via <c>ImGui.PushButtonRepeat</c>)
         /// so going from 60 → 240 doesn't require a click per step.
         /// </summary>
-        public static bool Stepper(string label, ref int value, int min, int max, int step = 1, string? format = null, string? tooltip = null, string? id = null)
+        public static bool Stepper(string label, ref int value, int min, int max, int step = 1, string? format = null, string? tooltip = null)
         {
             float rowH = 36f * Scale;
             float btnW = 32f * Scale;
             float availW = ImGui.GetContentRegionAvail().X;
 
-            string pushId = id ?? label;
-            ImGui.PushID(pushId);
+            ImGui.PushID(label);
             var cursor = ImGui.GetCursorScreenPos();
 
             // Background
@@ -164,12 +163,18 @@ namespace eft_dma_radar.Silk.UI.Controls
 
             ImGui.PopItemFlag();
 
-            // Advance cursor past the row
-            ImGui.SetCursorScreenPos(new Vector2(cursor.X, cursor.Y + rowH + 4f * Scale));
+            // Advance layout cursor past this custom row
+            float rowEndY = cursor.Y + rowH + 4f * Scale;
+            ImGui.SetCursorScreenPos(new Vector2(cursor.X, rowEndY));
             ImGui.Dummy(new Vector2(availW, 0));
 
-            if (tooltip is not null && ImGui.IsItemHovered())
-                ImGui.SetTooltip(tooltip);
+            // Tooltip: use manual rect hover over the visual row (more reliable than IsItemHovered on zero-height dummy)
+            if (tooltip is not null)
+            {
+                var rowRectMax = new Vector2(cursor.X + availW, cursor.Y + rowH);
+                if (ImGui.IsMouseHoveringRect(cursor, rowRectMax))
+                    ImGui.SetTooltip(tooltip);
+            }
 
             ImGui.PopID();
             return changed;
@@ -178,14 +183,13 @@ namespace eft_dma_radar.Silk.UI.Controls
         /// <summary>
         /// Float stepper variant. Use for values like UI Scale where 0.1 steps make sense.
         /// </summary>
-        public static bool StepperFloat(string label, ref float value, float min, float max, float step, string format = "{0:0.0}", string? tooltip = null, string? id = null)
+        public static bool StepperFloat(string label, ref float value, float min, float max, float step, string format = "{0:0.0}", string? tooltip = null)
         {
             float rowH = 36f * Scale;
             float btnW = 32f * Scale;
             float availW = ImGui.GetContentRegionAvail().X;
 
-            string pushId = id ?? label;
-            ImGui.PushID(pushId);
+            ImGui.PushID(label);
             var cursor = ImGui.GetCursorScreenPos();
 
             var dl = ImGui.GetWindowDrawList();
@@ -237,11 +241,18 @@ namespace eft_dma_radar.Silk.UI.Controls
 
             ImGui.PopItemFlag();
 
-            ImGui.SetCursorScreenPos(new Vector2(cursor.X, cursor.Y + rowH + 4f * Scale));
+            // Advance layout cursor past this custom row
+            float rowEndY = cursor.Y + rowH + 4f * Scale;
+            ImGui.SetCursorScreenPos(new Vector2(cursor.X, rowEndY));
             ImGui.Dummy(new Vector2(availW, 0));
 
-            if (tooltip is not null && ImGui.IsItemHovered())
-                ImGui.SetTooltip(tooltip);
+            // Tooltip: use manual rect hover over the visual row (more reliable than IsItemHovered on zero-height dummy)
+            if (tooltip is not null)
+            {
+                var rowRectMax = new Vector2(cursor.X + availW, cursor.Y + rowH);
+                if (ImGui.IsMouseHoveringRect(cursor, rowRectMax))
+                    ImGui.SetTooltip(tooltip);
+            }
 
             ImGui.PopID();
             return changed;
