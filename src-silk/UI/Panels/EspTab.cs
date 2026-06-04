@@ -102,6 +102,29 @@ namespace eft_dma_radar.Silk.UI.Panels
                 Config.MarkDirty();
             }
 
+            UIControls.Section(Chinese.E("Player Info"));
+
+            bool showWeapon = Config.EspShowWeapon;
+            if (UIControls.ToggleRow(Chinese.E("Show Weapon"), ref showWeapon, Chinese.E("Show held weapon name")))
+            {
+                Config.EspShowWeapon = showWeapon;
+                Config.MarkDirty();
+            }
+
+            bool showAmmo = Config.EspShowAmmo;
+            if (UIControls.ToggleRow(Chinese.E("Show Ammo"), ref showAmmo, Chinese.E("Show current mag ammo count")))
+            {
+                Config.EspShowAmmo = showAmmo;
+                Config.MarkDirty();
+            }
+
+            bool showPlayerStatus = Config.EspShowPlayerStatus;
+            if (UIControls.ToggleRow(Chinese.E("Show Player Status"), ref showPlayerStatus, Chinese.E("Show health/firemode status")))
+            {
+                Config.EspShowPlayerStatus = showPlayerStatus;
+                Config.MarkDirty();
+            }
+
             UIControls.Section(Chinese.E("Loot"));
 
             bool showLoot = Config.EspShowLoot;

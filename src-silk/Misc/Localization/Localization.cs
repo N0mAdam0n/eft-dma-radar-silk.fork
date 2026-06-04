@@ -613,6 +613,16 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Predicted Max Distance"] = "预测最大距离",
             ["Live Shot Lifetime"] = "实时弹道持续时间",
 
+            ["Player Info"] = "玩家信息",
+
+            ["Show Weapon"] = "显示武器",
+            ["Show Ammo"] = "显示弹药",
+            ["Show Player Status"] = "显示人物状态",
+
+            ["Show held weapon name"] = "显示玩家手中武器的名称",
+            ["Show current mag ammo count"] = "显示当前弹匣内弹药数量（及容量）",
+            ["Show health/firemode status"] = "显示健康状态、射击模式等人物状态信息",
+
             ["Scaling"] = "缩放",
             ["ESP UI Scale"] = "透视 UI 缩放",
             ["ESP UI Scale Tooltip"] = "缩放透视窗口中所有UI元素的大小（玩家/物资标签、方框线宽、点/圆半径、状态栏、FPS、能量条、弹道轨迹、手雷拖尾等）。\n用于高分辨率显示器或远距离观看时UI太小的问题。准星有独立缩放设置。",

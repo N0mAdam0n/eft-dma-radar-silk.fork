@@ -582,13 +582,75 @@ namespace eft_dma_radar.Silk.UI.ESP
 
             // ---- Labels ----
             string name = player.Name;
+            float nameY = topY - 4f * UiScale;
             if (!string.IsNullOrEmpty(name))
             {
                 float nameWidth = EspPaints.FontName.MeasureText(name);
                 float nameX = centerX - nameWidth * 0.5f;
-                float nameY = topY - 4f * UiScale;
                 canvas.DrawText(name, nameX + 1, nameY + 1, EspPaints.FontName, EspPaints.TextShadow);
                 canvas.DrawText(name, nameX, nameY, EspPaints.FontName, textPaint);
+            }
+
+            // ---- Weapon / Ammo / Player Status (under name, controlled from ESP settings) ----
+            if (player.HandsReady)
+            {
+                string? infoLine = null;
+
+                if (Config.EspShowWeapon && !string.IsNullOrEmpty(player.InHandsItem))
+                {
+                    infoLine = player.InHandsItem;
+
+                    bool hasAmmoCount = Config.EspShowAmmo && player.IsWeaponInHands && player.AmmoInMag >= 0;
+                    bool hasBulletType = !string.IsNullOrEmpty(player.InHandsAmmo);
+
+                    if (hasAmmoCount || hasBulletType)
+                    {
+                        string ammoPart = "";
+                        if (hasAmmoCount)
+                        {
+                            ammoPart = player.MagCapacity > 0
+                                ? $"{player.AmmoInMag}/{player.MagCapacity}"
+                                : $"{player.AmmoInMag}";
+                        }
+                        if (hasBulletType)
+                        {
+                            if (!string.IsNullOrEmpty(ammoPart))
+                                ammoPart += " ";
+                            ammoPart += player.InHandsAmmo;
+                        }
+                        infoLine += $" ({ammoPart})";
+                    }
+
+                    if (Config.EspShowPlayerStatus && !string.IsNullOrEmpty(player.FireMode))
+                    {
+                        infoLine += $" [{player.FireMode}]";
+                    }
+                }
+
+                // Health status as additional player status (if not healthy)
+                if (Config.EspShowPlayerStatus && player.HealthStatus != EHealthStatus.Healthy)
+                {
+                    string hs = player.HealthStatus switch
+                    {
+                        EHealthStatus.Injured => "受伤",
+                        EHealthStatus.BadlyInjured => "重伤",
+                        EHealthStatus.Dying => "垂死",
+                        _ => player.HealthStatus.ToString()
+                    };
+                    if (infoLine == null)
+                        infoLine = hs;
+                    else
+                        infoLine += $" | {hs}";
+                }
+
+                if (!string.IsNullOrEmpty(infoLine))
+                {
+                    float iw = EspPaints.FontInfo.MeasureText(infoLine);
+                    float ix = centerX - iw / 2f;
+                    float iy = nameY + EspPaints.FontName.Size + 2f * UiScale; // directly under name (or top if no name)
+                    canvas.DrawText(infoLine, ix + 1, iy + 1, EspPaints.FontInfo, EspPaints.TextShadow);
+                    canvas.DrawText(infoLine, ix, iy, EspPaints.FontInfo, textPaint);
+                }
             }
 
             string distText = $"{(int)distance}m";

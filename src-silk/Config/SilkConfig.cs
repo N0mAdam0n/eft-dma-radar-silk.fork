@@ -459,6 +459,15 @@ namespace eft_dma_radar.Silk.Config
         /// <summary>Show local player energy/hydration bars on the ESP window.</summary>
         public bool EspShowEnergyHydration { get; set; } = false;
 
+        /// <summary>Show held weapon name for players on the ESP overlay.</summary>
+        public bool EspShowWeapon { get; set; } = true;
+
+        /// <summary>Show current magazine ammo count (and capacity if known) for players holding weapons.</summary>
+        public bool EspShowAmmo { get; set; } = true;
+
+        /// <summary>Show additional player status info (e.g. health state, fire mode) on ESP labels.</summary>
+        public bool EspShowPlayerStatus { get; set; } = true;
+
         /// <summary>Maximum distance (meters) for ESP player rendering.</summary>
         public float EspPlayerDistance { get; set; } = 500f;
 
@@ -891,6 +900,7 @@ namespace eft_dma_radar.Silk.Config
             EspCrosshairScale = Math.Clamp(EspCrosshairScale, 0.5f, 5f);
             EspUIScale = Math.Clamp(EspUIScale, 0.5f, 4f);
             EspTargetFps = Math.Clamp(EspTargetFps, 0, 360);
+            // no-op clamps for bools
 
             var g = EspGrenades ??= new EspGrenadeConfig();
             g.MaxDistance = Math.Clamp(g.MaxDistance, 20f, 1000f);
