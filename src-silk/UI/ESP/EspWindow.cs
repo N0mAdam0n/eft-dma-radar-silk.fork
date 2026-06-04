@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using eft_dma_radar.Silk.Tarkov.GameWorld.Player;
 using eft_dma_radar.Silk.Tarkov.Unity;
+using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -30,6 +31,10 @@ namespace eft_dma_radar.Silk.UI.ESP
         private static GRBackendRenderTarget? _skBackendRenderTarget;
         private static Thread? _thread;
         private static volatile bool _running;
+
+        // Input context for local keyboard/mouse escape hatch on the ESP window itself
+        // (allows closing with ESC/F2 or mouse click even when DMA hotkeys / radar UI are not available, e.g. pre-raid)
+        private static IInputContext? _input;
 
         // FPS tracking
         private static int _fpsCounter;
@@ -120,18 +125,39 @@ namespace eft_dma_radar.Silk.UI.ESP
             {
                 var monitor = MonitorInfo.GetMonitor(Config.EspTargetScreen);
 
+                // Decide full borderless overlay vs safe small window at creation time.
+                // This prevents the "fullscreen trap" when opening ESP before raid / before DMA input is ready.
+                // Pre-raid or no InputManager: open as normal resizable window with titlebar (easy OS close, drag, X button).
+                // Once in raid and ready, user can re-toggle or use "move to monitor" to get full overlay.
+                bool canFullOverlay = Memory.InRaid && InputManager.IsReady;
+                int winW = canFullOverlay ? monitor.Width : Math.Min(monitor.Width, 1280);
+                int winH = canFullOverlay ? monitor.Height : Math.Min(monitor.Height, 720);
+
                 var options = WindowOptions.Default;
-                options.Size = new Vector2D<int>(monitor.Width, monitor.Height);
-                options.Position = new Vector2D<int>(monitor.Left, monitor.Top);
-                options.Title = "ESP";
+                options.Size = new Vector2D<int>(winW, winH);
+                options.Position = canFullOverlay
+                    ? new Vector2D<int>(monitor.Left, monitor.Top)
+                    : new Vector2D<int>(monitor.Left + (monitor.Width - winW) / 2, monitor.Top + (monitor.Height - winH) / 2);
+                options.Title = canFullOverlay
+                    ? "ESP"
+                    : "ESP (Waiting for Raid - Press ESC / F2 / Click / Titlebar X to close)";
                 options.VSync = false;
                 options.FramesPerSecond = Config.EspTargetFps;
                 options.UpdatesPerSecond = Config.EspTargetFps;
                 options.PreferredStencilBufferBits = 8;
                 options.PreferredBitDepth = new Vector4D<int>(8, 8, 8, 8);
-                options.WindowBorder = WindowBorder.Hidden;
+                options.WindowBorder = canFullOverlay ? WindowBorder.Hidden : WindowBorder.Resizable;
 
                 _window = SilkWindow.Create(options);
+
+                // Create input context so the ESP window can receive local keyboard/mouse even when it is the focused window.
+                // This is the main "local escape hatch" for the fullscreen overlay scenario.
+                _input = _window.CreateInput();
+                foreach (var kb in _input.Keyboards)
+                    kb.KeyDown += OnEspKeyDown;
+                foreach (var m in _input.Mice)
+                    m.MouseDown += OnEspMouseDown;
+
                 _window.Load += OnLoad;
                 _window.Render += OnRender;
                 _window.Resize += OnResize;
@@ -205,6 +231,8 @@ namespace eft_dma_radar.Silk.UI.ESP
         private static void OnClosing()
         {
             _running = false;
+            _input?.Dispose();
+            _input = null;
             _skSurface?.Dispose();
             _skBackendRenderTarget?.Dispose();
             _grContext?.Dispose();
@@ -734,10 +762,32 @@ namespace eft_dma_radar.Silk.UI.ESP
         private static void DrawCenteredText(SKCanvas canvas, string text)
         {
             var size = _window!.Size;
+
+            // Main "Waiting for Raid" message (large, from main paints)
             float textWidth = SKPaints.FontRegular48.MeasureText(text);
             float x = (size.X - textWidth) / 2f;
-            float y = size.Y / 2f;
+            float y = size.Y / 2f - 60;
             canvas.DrawText(text, x, y, SKPaints.FontRegular48, SKPaints.TextRadarStatus);
+
+            // Helpful escape instructions (use ESP fonts so they respect the new EspUIScale).
+            // This makes the pre-raid fullscreen (or safe small window) much less frustrating.
+            string[] helpLines =
+            [
+                "Press ESC or F2 (this PC keyboard) to close ESP",
+                "F2 on gaming PC keyboard (DMA hotkey) also works",
+                "Mouse click anywhere also closes in waiting state"
+            ];
+
+            float helpY = y + 90;
+            foreach (var line in helpLines)
+            {
+                float lw = EspPaints.FontStatus.MeasureText(line);
+                float lx = (size.X - lw) / 2f;
+                // shadow + text for readability on black
+                canvas.DrawText(line, lx + 1, helpY + 1, EspPaints.FontStatus, EspPaints.TextShadow);
+                canvas.DrawText(line, lx, helpY, EspPaints.FontStatus, EspPaints.TextBar);
+                helpY += EspPaints.FontStatus.Size + 12;
+            }
         }
 
         private static void DrawFpsOverlay(SKCanvas canvas)
@@ -888,12 +938,60 @@ namespace eft_dma_radar.Silk.UI.ESP
             try
             {
                 var m = MonitorInfo.GetMonitor(Config.EspTargetScreen);
-                _window.Size = new Vector2D<int>(m.Width, m.Height);
-                _window.Position = new Vector2D<int>(m.Left, m.Top);
-                _window.WindowBorder = WindowBorder.Hidden; // ensure borderless for true fullscreen coverage
-                Log.WriteLine($"[EspWindow] Moved to Monitor {m.Index + 1} ({m.Width}x{m.Height} @ {m.Left},{m.Top})");
+                bool canFull = Memory.InRaid && InputManager.IsReady;
+
+                if (canFull)
+                {
+                    _window.Size = new Vector2D<int>(m.Width, m.Height);
+                    _window.Position = new Vector2D<int>(m.Left, m.Top);
+                    _window.WindowBorder = WindowBorder.Hidden;
+                }
+                else
+                {
+                    // Keep a safe, manageable size with border so user isn't trapped
+                    int w = Math.Min(m.Width, 1280);
+                    int h = Math.Min(m.Height, 720);
+                    _window.Size = new Vector2D<int>(w, h);
+                    _window.Position = new Vector2D<int>(m.Left + (m.Width - w) / 2, m.Top + (m.Height - h) / 2);
+                    _window.WindowBorder = WindowBorder.Resizable;
+                }
+
+                Log.WriteLine($"[EspWindow] Moved to Monitor {m.Index + 1} ({m.Width}x{m.Height} @ {m.Left},{m.Top}) (fullOverlay={canFull})");
             }
             catch { }
+        }
+
+        #endregion
+
+        #region Local Input (escape hatch for ESP window)
+
+        /// <summary>
+        /// Local key handler on the ESP GLFW window.
+        /// Provides immediate close via ESC/F2 using whatever keyboard has focus on the PC running the radar app.
+        /// This works even before DMA/InputManager is ready or when the radar ImGui is covered.
+        /// </summary>
+        private static void OnEspKeyDown(IKeyboard keyboard, Key key, int scancode)
+        {
+            if (key == Key.Escape || key == Key.F2)
+            {
+                Log.WriteLine($"[EspWindow] Local key ({key}) close requested.");
+                Close();
+            }
+        }
+
+        /// <summary>
+        /// Mouse handler: in the "Waiting for Raid" / pre-overlay state, any mouse click on the ESP window
+        /// will close it. This gives an easy "click to dismiss" when the window is small or just showing the waiting message,
+        /// solving the "hard to close" / "no double-click minimize" issue before full raid.
+        /// </summary>
+        private static void OnEspMouseDown(IMouse mouse, MouseButton button)
+        {
+            // Mirror the condition used in OnRender for the waiting screen.
+            if (!Memory.InRaid || !CameraManager.IsActive)
+            {
+                Log.WriteLine("[EspWindow] Mouse click close in waiting state.");
+                Close();
+            }
         }
 
         #endregion
