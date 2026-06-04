@@ -925,17 +925,37 @@ namespace eft_dma_radar.Silk.Config
 
             Hotkeys ??= [];
 
-            // Seed a default hotkey for toggling the ESP overlay.
-            // This is especially important because when the ESP window is fullscreen/borderless
-            // on the radar PC, the user may not be able to easily use mouse/ImGui to close it.
-            // The hotkey is read via DMA from the *game* PC's keyboard, so it works even when
-            // the ESP window covers the radar PC screen.
-            if (!Hotkeys.ContainsKey("ToggleEspWindow") || Hotkeys["ToggleEspWindow"].Key < 1)
+            // ESP hotkey seeding + migration (updated behavior):
+            // - "ToggleEspWindow" controls *opening/closing* the ESP window (UI sidebar [E], ImGui E, settings).
+            // - "ToggleEspRender" (F2 by default) toggles *display of the perspective* (players/loot etc.) while window stays open.
+            //   F2 no longer opens or closes the window (avoids "开关窗口" with hotkey).
+            //   Double-click on the ESP window itself is used to switch between fullscreen borderless <-> windowed (with borders).
+            // Migration: if an old config had F2 bound to ToggleEspWindow, move the binding to ToggleEspRender and unbind the old.
+            if (!Hotkeys.ContainsKey("ToggleEspRender") || Hotkeys["ToggleEspRender"].Key < 1)
+            {
+                int f2 = VK.F2;
+                if (Hotkeys.TryGetValue("ToggleEspWindow", out var old) && old is { Enabled: true, Key: var k } && k == f2)
+                {
+                    old.Key = 0; // unbind window action from F2
+                    Log.WriteLine("[Config] Migrated F2 binding from ToggleEspWindow -> ToggleEspRender (render toggle only)");
+                }
+
+                Hotkeys["ToggleEspRender"] = new HotkeyEntry
+                {
+                    Enabled = true,
+                    Key = f2,
+                    Mode = HotkeyMode.Toggle,
+                };
+            }
+
+            // Ensure ToggleEspWindow entry exists (for users who want a hotkey to open the window).
+            // Do not force F2 here — it is reserved for render toggle.
+            if (!Hotkeys.ContainsKey("ToggleEspWindow"))
             {
                 Hotkeys["ToggleEspWindow"] = new HotkeyEntry
                 {
                     Enabled = true,
-                    Key = VK.F2, // F2 key (works via DMA even when ESP window covers the radar screen)
+                    Key = 0,
                     Mode = HotkeyMode.Toggle,
                 };
             }

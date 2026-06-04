@@ -237,6 +237,7 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Toggle Players On Top"] = "切换玩家置顶",
             ["Connect Groups"] = "连接组",
             ["Toggle ESP Window"] = "切换透视窗口",
+            ["Toggle ESP Render"] = "切换ESP透视显示",
             ["Cycle ESP Render Mode"] = "循环透视渲染模式",
             ["Toggle ESP Crosshair"] = "切换透视准星",
             ["Next Preset"] = "下一个预设",
@@ -273,6 +274,7 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Toggle drawing players above all other entities"] = "切换将玩家绘制在所有其他实体之上",
             ["Toggle squad connection lines"] = "切换小队连接线",
             ["Open/close the ESP overlay window"] = "打开/关闭透视叠加窗口",
+            ["Toggle display of ESP perspective (window stays open)"] = "切换是否显示ESP透视内容（窗口保持打开，仅影响绘制，不开关窗口；默认F2）",
             ["Cycle player render mode: None → Bones → Box → HeadDot"] = "循环玩家渲染模式：无 → 骨骼 → 方框 → 头点",
             ["Show/hide the center crosshair overlay on the ESP window"] = "显示/隐藏透视窗口中心准星叠加",
             ["Cycle to the next radar preset in your saved list, then Custom"] = "循环到已保存列表中的下一个雷达预设，然后自定义",
@@ -633,6 +635,10 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Grenade Trail Lifetime"] = "手雷拖尾留存时间",
             ["Grenade Dot Size"] = "手雷点大小",
             ["Grenade Trail Width"] = "手雷轨迹线宽",
+
+            // Render toggle (F2 / top of EspTab)
+            ["Show ESP Render"] = "显示透视内容",
+            ["Toggle ESP perspective drawing. When off, double-click to shrink the window to a bordered movable panel so game is not obscured. F2 hotkey has the same effect."] = "切换ESP透视绘制（玩家/物资/手雷等）。关闭时双击可缩小为带边框小窗，避免遮挡游戏。F2热键同效。",
 
             // PlayersTab / Aimview settings (reused where possible)
             ["渲染"] = "渲染",

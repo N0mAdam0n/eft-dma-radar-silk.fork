@@ -19,6 +19,17 @@ namespace eft_dma_radar.Silk.UI.ESP
     /// Projects game entities via <see cref="CameraManager.WorldToScreen"/> and
     /// draws them using SkiaSharp. Designed to be positioned over the game and
     /// used with a screen fuser.
+    ///
+    /// Non-raid behavior: completely clean window (solid black, no text, no "Waiting for Raid", no instructions).
+    /// All UI (players, loot, crosshair, HUD, hidden hints, etc.) only appears after entering a raid.
+    ///
+    /// Window behavior:
+    /// - Default open: borderless fullscreen (no titlebar/borders).
+    /// - Double-click: toggle to resizable windowed (borders + title, smaller, movable) &lt;-&gt; back to fullscreen.
+    /// - Fullscreen mode never shows borders.
+    /// - F2 hotkey (DMA + local): toggles _renderEnabled (whether perspective is drawn). Does NOT open/close window.
+    /// - ESC (local): always closes window (escape hatch).
+    /// - In non-raid: single left-click also closes (silent convenience).
     /// </summary>
     internal static class EspWindow
     {
@@ -32,8 +43,22 @@ namespace eft_dma_radar.Silk.UI.ESP
         private static Thread? _thread;
         private static volatile bool _running;
 
-        // Input context for local keyboard/mouse escape hatch on the ESP window itself
-        // (allows closing with ESC/F2 or mouse click even when DMA hotkeys / radar UI are not available, e.g. pre-raid)
+        // Render enabled flag: when false, ESP perspective (players/loot/entities) is not drawn.
+        // Window stays open; user uses double-click to shrink to bordered windowed mode to avoid covering game.
+        // Controlled by F2 hotkey (DMA + local) and UI toggle (only affects display, never opens/closes window).
+        private static bool _renderEnabled = true;
+
+        // Current window presentation mode. Default on Open(): borderless fullscreen (no borders per spec).
+        // Double-click toggles to windowed (resizable + titlebar) or back.
+        // Fullscreen mode never has borders; windowed mode has them.
+        private static bool _isFullscreen = true;
+
+        // For double-click detection on local mouse (within ~280ms)
+        private static long _lastMouseDownTick;
+
+        // Input context for local keyboard/mouse escape hatch on the ESP window itself.
+        // Works even in non-raid (clean black window) and when DMA/radar UI not available:
+        // ESC = close, F2 = toggle render, double-click = windowed/fullscreen mode, single-click (non-raid) = close.
         private static IInputContext? _input;
 
         // FPS tracking
@@ -81,6 +106,10 @@ namespace eft_dma_radar.Silk.UI.ESP
             if (_running)
                 return;
 
+            _renderEnabled = true;
+            _isFullscreen = true;
+            _lastMouseDownTick = 0;
+
             _running = true;
             _thread = new Thread(RunWindow)
             {
@@ -88,7 +117,7 @@ namespace eft_dma_radar.Silk.UI.ESP
                 IsBackground = true,
             };
             _thread.Start();
-            Log.WriteLine("[EspWindow] Opening...");
+            Log.WriteLine("[EspWindow] Opening (default: fullscreen borderless, render on)...");
         }
 
         /// <summary>
@@ -125,28 +154,29 @@ namespace eft_dma_radar.Silk.UI.ESP
             {
                 var monitor = MonitorInfo.GetMonitor(Config.EspTargetScreen);
 
-                // Decide full borderless overlay vs safe small window at creation time.
-                // This prevents the "fullscreen trap" when opening ESP before raid / before DMA input is ready.
-                // Pre-raid or no InputManager: open as normal resizable window with titlebar (easy OS close, drag, X button).
-                // Once in raid and ready, user can re-toggle or use "move to monitor" to get full overlay.
-                bool canFullOverlay = Memory.InRaid && InputManager.IsReady;
-                int winW = canFullOverlay ? monitor.Width : Math.Min(monitor.Width, 1280);
-                int winH = canFullOverlay ? monitor.Height : Math.Min(monitor.Height, 720);
+                // Always open as borderless fullscreen by default (per user requirement).
+                // Non-raid: the window is intentionally kept 100% clean (no drawn text/UI whatsoever).
+                // We rely on:
+                // - Local input (ESC closes, F2 toggles render, double-click toggles windowed/fullscreen)
+                // - Silent single-click close in !InRaid
+                // - Radar app controls (sidebar ESP button, ImGui E, settings "开启透视窗口" toggle)
+                // This gives true fullscreen no-border on open.
+                // User can double-click to "shrink" to resizable titled window (which has borders, clean title "ESP (Windowed)").
+                // Fullscreen mode *never* has borders.
 
                 var options = WindowOptions.Default;
-                options.Size = new Vector2D<int>(winW, winH);
-                options.Position = canFullOverlay
-                    ? new Vector2D<int>(monitor.Left, monitor.Top)
-                    : new Vector2D<int>(monitor.Left + (monitor.Width - winW) / 2, monitor.Top + (monitor.Height - winH) / 2);
-                options.Title = canFullOverlay
-                    ? "ESP"
-                    : "ESP (Waiting for Raid - Press ESC / F2 / Click / Titlebar X to close)";
+                options.Size = new Vector2D<int>(monitor.Width, monitor.Height);
+                options.Position = new Vector2D<int>(monitor.Left, monitor.Top);
+                options.Title = "ESP";
                 options.VSync = false;
                 options.FramesPerSecond = Config.EspTargetFps;
                 options.UpdatesPerSecond = Config.EspTargetFps;
                 options.PreferredStencilBufferBits = 8;
                 options.PreferredBitDepth = new Vector4D<int>(8, 8, 8, 8);
-                options.WindowBorder = canFullOverlay ? WindowBorder.Hidden : WindowBorder.Resizable;
+                options.WindowBorder = WindowBorder.Hidden; // default: no border, full screen
+
+                _isFullscreen = true;
+                _renderEnabled = true;
 
                 _window = SilkWindow.Create(options);
 
@@ -180,7 +210,8 @@ namespace eft_dma_radar.Silk.UI.ESP
 
                 // Create input context here (inside OnLoad, after the window has started its loop),
                 // matching the pattern in RadarWindow. This allows local keyboard/mouse handlers
-                // for ESC/F2/click-to-close without relying on DMA.
+                // for ESC (close) / F2 (toggle render) / double-click (mode) even in non-raid clean-window state
+                // or when DMA/InputManager/radar UI not available.
                 // Doing it too early (right after Create) can throw or fail to initialize the input context.
                 _input = _window!.CreateInput();
                 foreach (var kb in _input.Keyboards)
@@ -337,11 +368,21 @@ namespace eft_dma_radar.Silk.UI.ESP
                 var localPlayer = Memory.LocalPlayer;
                 var allPlayers = Memory.Players;
 
-                if (!Memory.InRaid || localPlayer is null || !CameraManager.IsActive)
+                bool inRaid = Memory.InRaid && localPlayer is not null && CameraManager.IsActive;
+
+                if (!_renderEnabled && inRaid)
                 {
-                    DrawCenteredText(canvas, "Waiting for Raid...");
+                    // Only draw the "hidden" hint when inside a raid but the user has explicitly toggled
+                    // perspective display off via F2 / settings. This is useful feedback in-raid.
+                    // In non-raid (pre-raid / waiting / lobby etc.): NEVER draw any UI/text at all.
+                    // The window stays a clean black overlay. Interaction still possible via:
+                    // local ESC (close), double-click (shrink/expand window), F2 (render toggle, no visual until raid).
+                    DrawEspHiddenHint(canvas);
+                    _grContext.Flush();
+                    return;
                 }
-                else
+
+                if (inRaid)
                 {
                     // Scale from game viewport coordinates to ESP window coordinates
                     int vpW = CameraManager.ViewportWidth;
@@ -354,7 +395,7 @@ namespace eft_dma_radar.Silk.UI.ESP
                         float scaleY = winSize.Y / (float)vpH;
                         canvas.Save();
                         canvas.Scale(scaleX, scaleY);
-                        DrawEspEntities(canvas, localPlayer, allPlayers);
+                        DrawEspEntities(canvas, localPlayer!, allPlayers);
                         canvas.Restore();
                     }
 
@@ -371,6 +412,10 @@ namespace eft_dma_radar.Silk.UI.ESP
                     if (Config.EspShowFps)
                         DrawFpsOverlay(canvas);
                 }
+                // Non-raid state: draw nothing at all beyond the black clear above.
+                // This fulfills the request for a completely clean window (no text, no instructions, no hints)
+                // until the player actually enters a raid.
+                // Escape mechanisms (ESC, double-click, radar UI toggles, single-click) remain functional via input handlers.
 
                 _grContext.Flush();
             }
@@ -825,34 +870,36 @@ namespace eft_dma_radar.Silk.UI.ESP
 
         #region Helpers
 
-        private static void DrawCenteredText(SKCanvas canvas, string text)
+        /// <summary>
+        /// Drawn ONLY when inside a raid (_renderEnabled == false via F2 / UI).
+        /// In non-raid state we deliberately draw zero UI (clean black window per requirement).
+        /// The hint tells the user the perspective is intentionally hidden and how to re-enable or shrink.
+        /// </summary>
+        private static void DrawEspHiddenHint(SKCanvas canvas)
         {
             var size = _window!.Size;
+            float s = UiScale;
 
-            // Main "Waiting for Raid" message (large, from main paints)
-            float textWidth = SKPaints.FontRegular48.MeasureText(text);
-            float x = (size.X - textWidth) / 2f;
-            float y = size.Y / 2f - 60;
-            canvas.DrawText(text, x, y, SKPaints.FontRegular48, SKPaints.TextRadarStatus);
+            string main = "ESP 透视已隐藏";
+            string sub1 = "按 F2 切换显示";
+            string sub2 = "双击 切换窗口模式（缩小带边框 / 全屏无边）";
+            string sub3 = "ESC 关闭窗口";
 
-            // Helpful escape instructions (use ESP fonts so they respect the new EspUIScale).
-            // This makes the pre-raid fullscreen (or safe small window) much less frustrating.
-            string[] helpLines =
-            [
-                "Press ESC or F2 (this PC keyboard) to close ESP",
-                "F2 on gaming PC keyboard (DMA hotkey) also works",
-                "Mouse click anywhere also closes in waiting state"
-            ];
+            // center main
+            float tw = EspPaints.FontStatus.MeasureText(main);
+            float cx = (size.X - tw) / 2f;
+            float cy = size.Y * 0.42f;
+            canvas.DrawText(main, cx + 1, cy + 1, EspPaints.FontStatus, EspPaints.TextShadow);
+            canvas.DrawText(main, cx, cy, EspPaints.FontStatus, EspPaints.TextBar);
 
-            float helpY = y + 90;
-            foreach (var line in helpLines)
+            float y = cy + EspPaints.FontStatus.Size + 18 * s;
+            foreach (var line in new[] { sub1, sub2, sub3 })
             {
                 float lw = EspPaints.FontStatus.MeasureText(line);
                 float lx = (size.X - lw) / 2f;
-                // shadow + text for readability on black
-                canvas.DrawText(line, lx + 1, helpY + 1, EspPaints.FontStatus, EspPaints.TextShadow);
-                canvas.DrawText(line, lx, helpY, EspPaints.FontStatus, EspPaints.TextBar);
-                helpY += EspPaints.FontStatus.Size + 12;
+                canvas.DrawText(line, lx + 1, y + 1, EspPaints.FontStatus, EspPaints.TextShadow);
+                canvas.DrawText(line, lx, y, EspPaints.FontStatus, EspPaints.TextBar);
+                y += EspPaints.FontStatus.Size + 8 * s;
             }
         }
 
@@ -977,6 +1024,77 @@ namespace eft_dma_radar.Silk.UI.ESP
         }
 
         /// <summary>
+        /// Toggles whether the ESP perspective (entities, players, loot, etc.) is drawn.
+        /// Does NOT open or close the window — only affects rendering inside an open window.
+        /// Called by the (now repurposed) F2 hotkey and the settings toggle row.
+        /// </summary>
+        public static void ToggleRender()
+        {
+            if (!IsOpen)
+                return; // strictly: F2 hotkey no longer controls window open/close
+            _renderEnabled = !_renderEnabled;
+            Log.WriteLine($"[EspWindow] Render toggled: {(_renderEnabled ? "ON (perspective visible)" : "OFF (hidden)")}");
+        }
+
+        /// <summary>
+        /// Sets the render enabled state directly (from UI checkbox). If enabling while closed, opens the window.
+        /// </summary>
+        public static void SetRenderEnabled(bool enabled)
+        {
+            if (!IsOpen && enabled)
+                Open();
+            _renderEnabled = enabled;
+            Log.WriteLine($"[EspWindow] Render set: {(_renderEnabled ? "ON" : "OFF")}");
+        }
+
+        /// <summary>
+        /// Public accessor for current render state (used by EspTab checkbox and hotkey registration).
+        /// </summary>
+        public static bool RenderEnabled => _renderEnabled;
+
+        /// <summary>
+        /// Toggles between borderless fullscreen (default) and resizable windowed (with borders/titlebar).
+        /// Triggered by double-click on the ESP window.
+        /// - Fullscreen: always WindowBorder.Hidden, full monitor size/pos.
+        /// - Windowed: Resizable border + title, smaller centered size (user can drag/resize/close via OS).
+        /// </summary>
+        public static void ToggleWindowMode()
+        {
+            if (_window is null)
+                return;
+            try
+            {
+                var m = MonitorInfo.GetMonitor(Config.EspTargetScreen);
+                if (_isFullscreen)
+                {
+                    // shrink
+                    int w = Math.Min(m.Width, 1280);
+                    int h = Math.Min(m.Height, 720);
+                    _window.Size = new Vector2D<int>(w, h);
+                    _window.Position = new Vector2D<int>(m.Left + (m.Width - w) / 2, m.Top + (m.Height - h) / 2);
+                    _window.WindowBorder = WindowBorder.Resizable;
+                    _window.Title = "ESP (Windowed)";
+                    _isFullscreen = false;
+                    Log.WriteLine("[EspWindow] Switched to WINDOWED mode (borders enabled, user can drag/resize/X)");
+                }
+                else
+                {
+                    // expand to full borderless
+                    _window.Size = new Vector2D<int>(m.Width, m.Height);
+                    _window.Position = new Vector2D<int>(m.Left, m.Top);
+                    _window.WindowBorder = WindowBorder.Hidden;
+                    _window.Title = "ESP";
+                    _isFullscreen = true;
+                    Log.WriteLine("[EspWindow] Switched to FULLSCREEN borderless (no borders)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.WriteLine($"[EspWindow] ToggleWindowMode failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Applies the current <see cref="SilkConfig.EspTargetFps"/> to the live window.
         /// Safe to call from the UI thread while the window is running.
         /// </summary>
@@ -1004,58 +1122,86 @@ namespace eft_dma_radar.Silk.UI.ESP
             try
             {
                 var m = MonitorInfo.GetMonitor(Config.EspTargetScreen);
-                bool canFull = Memory.InRaid && InputManager.IsReady;
 
-                if (canFull)
+                // Honor the current user-chosen presentation mode (set by double-click or initial default).
+                // "将透视移动到显示器" should keep fullscreen vs windowed preference.
+                if (_isFullscreen)
                 {
                     _window.Size = new Vector2D<int>(m.Width, m.Height);
                     _window.Position = new Vector2D<int>(m.Left, m.Top);
                     _window.WindowBorder = WindowBorder.Hidden;
+                    _window.Title = "ESP";
                 }
                 else
                 {
-                    // Keep a safe, manageable size with border so user isn't trapped
                     int w = Math.Min(m.Width, 1280);
                     int h = Math.Min(m.Height, 720);
                     _window.Size = new Vector2D<int>(w, h);
                     _window.Position = new Vector2D<int>(m.Left + (m.Width - w) / 2, m.Top + (m.Height - h) / 2);
                     _window.WindowBorder = WindowBorder.Resizable;
+                    _window.Title = "ESP (Windowed)";
                 }
 
-                Log.WriteLine($"[EspWindow] Moved to Monitor {m.Index + 1} ({m.Width}x{m.Height} @ {m.Left},{m.Top}) (fullOverlay={canFull})");
+                Log.WriteLine($"[EspWindow] Moved to Monitor {m.Index + 1} ({m.Width}x{m.Height} @ {m.Left},{m.Top}) (fullscreen={_isFullscreen})");
             }
             catch { }
         }
 
         #endregion
 
-        #region Local Input (escape hatch for ESP window)
+        #region Local Input (escape hatch for ESP window — works even on clean non-raid black window)
 
         /// <summary>
         /// Local key handler on the ESP GLFW window.
-        /// Provides immediate close via ESC/F2 using whatever keyboard has focus on the PC running the radar app.
-        /// This works even before DMA/InputManager is ready or when the radar ImGui is covered.
+        /// ESC: always close the window (reliable escape hatch).
+        /// F2: toggle render (perspective display on/off) — does not close window.
+        /// Works even in non-raid (clean black window, no drawn UI) or before DMA/InputManager ready.
         /// </summary>
         private static void OnEspKeyDown(IKeyboard keyboard, Key key, int scancode)
         {
-            if (key == Key.Escape || key == Key.F2)
+            if (key == Key.Escape)
             {
-                Log.WriteLine($"[EspWindow] Local key ({key}) close requested.");
+                Log.WriteLine("[EspWindow] Local ESC: close requested.");
                 Close();
+            }
+            else if (key == Key.F2)
+            {
+                Log.WriteLine("[EspWindow] Local F2: toggle render (perspective visibility).");
+                ToggleRender();
             }
         }
 
         /// <summary>
-        /// Mouse handler: in the "Waiting for Raid" / pre-overlay state, any mouse click on the ESP window
-        /// will close it. This gives an easy "click to dismiss" when the window is small or just showing the waiting message,
-        /// solving the "hard to close" / "no double-click minimize" issue before full raid.
+        /// Mouse handler on the ESP window (local input).
+        /// - Double-click (Left): toggle between fullscreen borderless &lt;-&gt; windowed (with borders/titlebar).
+        ///   Primary way to shrink the overlay (get a titled small window) or expand back.
+        /// - Single-click (Left) when !InRaid: silently closes the window (convenience for pre-raid black overlay).
+        ///
+        /// Note: in non-raid the ESP window is deliberately blank (no drawn text or UI at all).
+        /// Users rely on muscle memory, radar app controls (E key / sidebar / settings), or local ESC/double-click.
+        /// In-raid clicks do not pass through (the overlay captures input); shrink first if needed.
         /// </summary>
         private static void OnEspMouseDown(IMouse mouse, MouseButton button)
         {
-            // Mirror the condition used in OnRender for the waiting screen.
+            if (button != MouseButton.Left)
+                return;
+
+            long now = Environment.TickCount64;
+            bool isDouble = (now - _lastMouseDownTick) < 280;
+            _lastMouseDownTick = now;
+
+            if (isDouble)
+            {
+                Log.WriteLine("[EspWindow] Double-click detected: toggling window mode (fullscreen &lt;-&gt; windowed with border)");
+                ToggleWindowMode();
+                return;
+            }
+
+            // Single click in non-raid: silent close (no visual prompt since window must stay clean).
+            // Helps dismiss the black overlay quickly before raid starts.
             if (!Memory.InRaid || !CameraManager.IsActive)
             {
-                Log.WriteLine("[EspWindow] Mouse click close in waiting state.");
+                Log.WriteLine("[EspWindow] Single-click close in non-raid state.");
                 Close();
             }
         }

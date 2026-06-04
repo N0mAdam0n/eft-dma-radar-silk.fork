@@ -281,7 +281,7 @@ namespace eft_dma_radar.Silk.UI.Shell
 
                     bool hovered = ImGui.IsItemHovered();
                     if (hovered)
-                        ImGui.SetTooltip("透视叠加 [E]");
+                        ImGui.SetTooltip("透视叠加 [E]  |  F2 切换显示/隐藏内容（不关窗）");
 
                     var color = active ? ActiveColor : (hovered ? HoverColor : IdleColor);
                     const string icon = "*";

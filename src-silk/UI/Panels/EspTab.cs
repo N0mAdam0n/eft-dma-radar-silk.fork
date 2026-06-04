@@ -31,8 +31,22 @@ namespace eft_dma_radar.Silk.UI.Panels
             if (UIControls.ToggleRow("开启透视窗口", ref open))
             {
                 eft_dma_radar.Silk.UI.ESP.EspWindow.Toggle();
-                Config.ShowEspWidget = eft_dma_radar.Silk.UI.ESP.EspWindow.IsOpen;
+                open = eft_dma_radar.Silk.UI.ESP.EspWindow.IsOpen; // refresh after toggle
+                Config.ShowEspWidget = open;
                 Config.MarkDirty();
+            }
+
+            // When window is open, expose the render (perspective) toggle here too.
+            // This is what F2 (default hotkey) now controls: show/hide drawings, window itself stays open.
+            // Double-click on ESP window shrinks it to bordered windowed mode (see EspWindow.cs).
+            if (open)
+            {
+                bool rend = eft_dma_radar.Silk.UI.ESP.EspWindow.RenderEnabled;
+                if (UIControls.ToggleRow(Chinese.E("Show ESP Render"), ref rend,
+                    Chinese.E("Toggle ESP perspective drawing. When off, double-click to shrink the window to a bordered movable panel so game is not obscured. F2 hotkey has the same effect.")))
+                {
+                    eft_dma_radar.Silk.UI.ESP.EspWindow.SetRenderEnabled(rend);
+                }
             }
 
             int espFps = Config.EspTargetFps;

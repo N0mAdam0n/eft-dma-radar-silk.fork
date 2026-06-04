@@ -100,6 +100,13 @@ internal static class HotkeyManager
             Chinese.T("Open/close the ESP overlay window"),
             static e => { if (e.IsDown) eft_dma_radar.Silk.UI.ESP.EspWindow.Toggle(); }),
 
+        // New dedicated action for F2 (default). Toggles only the *display* of ESP perspective/rendering.
+        // Does NOT open or close the window (per user request: F2 bound hotkey should not switch window).
+        // When window is closed, this hotkey is a no-op. Use sidebar/E/settings to open the ESP window.
+        new("ToggleEspRender", Chinese.T("Toggle ESP Render"), Chinese.T("ESP"),
+            Chinese.T("Toggle display of ESP perspective (window stays open)"),
+            static e => { if (e.IsDown) eft_dma_radar.Silk.UI.ESP.EspWindow.ToggleRender(); }),
+
         new("EspCycleRenderMode", Chinese.T("Cycle ESP Render Mode"), Chinese.T("ESP"),
             Chinese.T("Cycle player render mode: None → Bones → Box → HeadDot"),
             static e => { if (e.IsDown) eft_dma_radar.Silk.UI.ESP.EspWindow.CycleRenderMode(); }),
