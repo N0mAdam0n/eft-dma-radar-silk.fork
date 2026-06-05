@@ -222,6 +222,13 @@ namespace eft_dma_radar.Silk.UI.ESP
 
         #endregion
 
+        #region Corpses (ESP)
+
+        /// <summary>Corpse labels on ESP (brownish, matches radar corpse color).</summary>
+        public static SKPaint TextCorpse { get; } = MakeFillPaint(200, 150, 80, 210);
+
+        #endregion
+
         #region Crosshair
 
         public static SKPaint Crosshair { get; } = new()

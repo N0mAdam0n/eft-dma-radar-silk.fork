@@ -3,6 +3,7 @@
 // See LICENSE in the repository root for details.
 
 using eft_dma_radar.Silk.Tarkov.Features.Ballistics;
+using eft_dma_radar.Silk.UI.ESP;
 using eft_dma_radar.Silk.UI.Widgets;
 using ImGuiNET;
 
@@ -26,26 +27,38 @@ namespace eft_dma_radar.Silk.UI.Panels
         {
             ImGui.Spacing();
 
-            // ── Window state ──
-            bool open = eft_dma_radar.Silk.UI.ESP.EspWindow.IsOpen;
+            // Local helper to reduce boilerplate + prevent forgetting MarkDirty or live apply calls.
+            // Usage examples:
+            //   SetEsp(newVal, v => Config.XXX = v);
+            //   SetEsp(newVal, v => Config.XXX = v, liveApply: EspWindow.ApplyTargetFps);
+            void SetEsp<T>(T value, Action<T> setter, Action? liveApply = null)
+            {
+                setter(value);
+                liveApply?.Invoke();
+                Config.MarkDirty();
+            }
+
+            UIControls.Section("窗口");
+
+            bool open = EspWindow.IsOpen;
             if (UIControls.ToggleRow("开启透视窗口", ref open))
             {
-                eft_dma_radar.Silk.UI.ESP.EspWindow.Toggle();
-                open = eft_dma_radar.Silk.UI.ESP.EspWindow.IsOpen; // refresh after toggle
+                EspWindow.Toggle();
+                open = EspWindow.IsOpen; // refresh after toggle (side-effect)
                 Config.ShowEspWidget = open;
                 Config.MarkDirty();
             }
 
-            // When window is open, expose the render (perspective) toggle here too.
-            // This is what F2 (default hotkey) now controls: show/hide drawings, window itself stays open.
-            // Double-click on ESP window shrinks it to bordered windowed mode (see EspWindow.cs).
+            // The "显示透视内容" (F2 hotkey + checkbox) only appears when window is open.
+            // It purely toggles content *inside* the window — never opens/closes the window itself.
             if (open)
             {
-                bool rend = eft_dma_radar.Silk.UI.ESP.EspWindow.RenderEnabled;
+                bool rend = EspWindow.RenderEnabled;
                 if (UIControls.ToggleRow(Chinese.E("Show ESP Render"), ref rend,
                     Chinese.E("Toggle ESP perspective drawing. When off, double-click to shrink the window to a bordered movable panel so game is not obscured. F2 hotkey has the same effect.")))
                 {
-                    eft_dma_radar.Silk.UI.ESP.EspWindow.SetRenderEnabled(rend);
+                    EspWindow.SetRenderEnabled(rend);
+                    // no MarkDirty — this is a live runtime flag only (not persisted across sessions)
                 }
             }
 
@@ -53,9 +66,7 @@ namespace eft_dma_radar.Silk.UI.Panels
             if (UIControls.Stepper("透视目标帧率", ref espFps, 0, 360, 5,
                 tooltip: "透视窗口的渲染帧率（0 = 无限制）。\n独立于雷达帧率。"))
             {
-                Config.EspTargetFps = espFps;
-                eft_dma_radar.Silk.UI.ESP.EspWindow.ApplyTargetFps();
-                Config.MarkDirty();
+                SetEsp(espFps, v => Config.EspTargetFps = v, liveApply: EspWindow.ApplyTargetFps);
             }
 
             UIControls.Section("显示器");
@@ -64,21 +75,21 @@ namespace eft_dma_radar.Silk.UI.Panels
                 RefreshMonitors();
 
             int targetScreen = Config.EspTargetScreen;
-            if (UIControls.ComboRow("目标显示器", ref targetScreen, _monitorNames!,
+            string[] monitorNames = _monitorNames ?? [];
+            if (UIControls.ComboRow("目标显示器", ref targetScreen, monitorNames,
                 "透视窗口在哪个显示器上打开。\n使用「将透视移动到显示器」来重新定位正在运行的窗口。"))
             {
-                Config.EspTargetScreen = targetScreen;
-                Config.MarkDirty();
+                SetEsp(targetScreen, v => Config.EspTargetScreen = v);
             }
 
             if (ImGui.SmallButton("刷新显示器"))
                 RefreshMonitors();
 
-            if (eft_dma_radar.Silk.UI.ESP.EspWindow.IsOpen)
+            if (EspWindow.IsOpen)
             {
                 ImGui.SameLine();
                 if (ImGui.SmallButton("将透视移动到显示器"))
-                    eft_dma_radar.Silk.UI.ESP.EspWindow.ApplyTargetMonitor();
+                    EspWindow.ApplyTargetMonitor();
             }
 
             UIControls.Section(Chinese.E("Players"));
@@ -86,16 +97,14 @@ namespace eft_dma_radar.Silk.UI.Panels
             bool showPlayers = Config.EspShowPlayers;
             if (UIControls.ToggleRow(Chinese.E("Show Players"), ref showPlayers))
             {
-                Config.EspShowPlayers = showPlayers;
-                Config.MarkDirty();
+                SetEsp(showPlayers, v => Config.EspShowPlayers = v);
             }
 
             int mode = Config.EspRenderMode;
             if (UIControls.ComboRow(Chinese.E("Render Mode"), ref mode, _espRenderModes,
                 "每个玩家的绘制方式。\n也可以通过热键循环切换。"))
             {
-                Config.EspRenderMode = mode;
-                Config.MarkDirty();
+                SetEsp(mode, v => Config.EspRenderMode = v);
             }
 
             if (mode == 2) // Box
@@ -103,8 +112,7 @@ namespace eft_dma_radar.Silk.UI.Panels
                 bool bones = Config.EspShowBones;
                 if (UIControls.ToggleRow(Chinese.E("Show Bones Inside Box"), ref bones))
                 {
-                    Config.EspShowBones = bones;
-                    Config.MarkDirty();
+                    SetEsp(bones, v => Config.EspShowBones = v);
                 }
             }
 
@@ -112,8 +120,7 @@ namespace eft_dma_radar.Silk.UI.Panels
             if (UIControls.StepperFloat(Chinese.E("Max Distance"), ref pDist, 10f, 2000f, 10f, "{0:0}m",
                 "超出此距离的玩家不会被绘制"))
             {
-                Config.EspPlayerDistance = pDist;
-                Config.MarkDirty();
+                SetEsp(pDist, v => Config.EspPlayerDistance = v);
             }
 
             UIControls.Section(Chinese.E("Player Info"));
@@ -121,22 +128,19 @@ namespace eft_dma_radar.Silk.UI.Panels
             bool showWeapon = Config.EspShowWeapon;
             if (UIControls.ToggleRow(Chinese.E("Show Weapon"), ref showWeapon, Chinese.E("Show held weapon name")))
             {
-                Config.EspShowWeapon = showWeapon;
-                Config.MarkDirty();
+                SetEsp(showWeapon, v => Config.EspShowWeapon = v);
             }
 
             bool showAmmo = Config.EspShowAmmo;
             if (UIControls.ToggleRow(Chinese.E("Show Ammo"), ref showAmmo, Chinese.E("Show current mag ammo count")))
             {
-                Config.EspShowAmmo = showAmmo;
-                Config.MarkDirty();
+                SetEsp(showAmmo, v => Config.EspShowAmmo = v);
             }
 
             bool showPlayerStatus = Config.EspShowPlayerStatus;
             if (UIControls.ToggleRow(Chinese.E("Show Player Status"), ref showPlayerStatus, Chinese.E("Show health/firemode status")))
             {
-                Config.EspShowPlayerStatus = showPlayerStatus;
-                Config.MarkDirty();
+                SetEsp(showPlayerStatus, v => Config.EspShowPlayerStatus = v);
             }
 
             UIControls.Section(Chinese.E("Loot"));
@@ -144,16 +148,30 @@ namespace eft_dma_radar.Silk.UI.Panels
             bool showLoot = Config.EspShowLoot;
             if (UIControls.ToggleRow(Chinese.E("Show Loot"), ref showLoot))
             {
-                Config.EspShowLoot = showLoot;
-                Config.MarkDirty();
+                SetEsp(showLoot, v => Config.EspShowLoot = v);
             }
 
             float lDist = Config.EspLootDistance;
             if (UIControls.StepperFloat(Chinese.E("Max Distance"), ref lDist, 10f, 500f, 5f, "{0:0}m",
                 "超出此距离的物资不会被绘制"))
             {
-                Config.EspLootDistance = lDist;
-                Config.MarkDirty();
+                SetEsp(lDist, v => Config.EspLootDistance = v);
+            }
+
+            bool showCorpses = Config.EspShowCorpses;
+            if (UIControls.ToggleRow(Chinese.E("Show Corpses"), ref showCorpses))
+            {
+                SetEsp(showCorpses, v => Config.EspShowCorpses = v);
+            }
+
+            if (showCorpses)
+            {
+                float cDist = Config.EspCorpseDistance;
+                if (UIControls.StepperFloat(Chinese.E("Corpse Max Distance"), ref cDist, 10f, 1000f, 10f, "{0:0}m",
+                    "超出此距离的尸体不会被绘制"))
+                {
+                    SetEsp(cDist, v => Config.EspCorpseDistance = v);
+                }
             }
 
             UIControls.Section(Chinese.E("Crosshair"));
@@ -161,11 +179,10 @@ namespace eft_dma_radar.Silk.UI.Panels
             bool crosshair = Config.EspShowCrosshair;
             if (UIControls.ToggleRow(Chinese.E("Show Crosshair"), ref crosshair))
             {
-                Config.EspShowCrosshair = crosshair;
-                Config.MarkDirty();
+                SetEsp(crosshair, v => Config.EspShowCrosshair = v);
             }
 
-            if (Config.EspShowCrosshair)
+            if (crosshair)
             {
                 ImGui.Indent(16);
 
@@ -173,16 +190,14 @@ namespace eft_dma_radar.Silk.UI.Panels
                 if (UIControls.ComboRow(Chinese.E("Style"), ref cType, _espCrosshairTypes,
                     Chinese.E("Crosshair Style Tooltip")))
                 {
-                    Config.EspCrosshairType = cType;
-                    Config.MarkDirty();
+                    SetEsp(cType, v => Config.EspCrosshairType = v);
                 }
 
                 float cScale = Config.EspCrosshairScale;
                 if (UIControls.StepperFloat(Chinese.E("Scale"), ref cScale, 0.5f, 5f, 0.1f, "{0:0.0}x",
                     Chinese.E("Crosshair Scale Tooltip")))
                 {
-                    Config.EspCrosshairScale = cScale;
-                    Config.MarkDirty();
+                    SetEsp(cScale, v => Config.EspCrosshairScale = v);
                 }
 
                 ImGui.Unindent(16);
@@ -194,8 +209,7 @@ namespace eft_dma_radar.Silk.UI.Panels
             if (UIControls.StepperFloat(Chinese.E("ESP UI Scale"), ref eUiScale, 0.5f, 4f, 0.1f, "{0:0.0}x",
                 Chinese.E("ESP UI Scale Tooltip")))
             {
-                Config.EspUIScale = eUiScale;
-                Config.MarkDirty();
+                SetEsp(eUiScale, v => Config.EspUIScale = v);
             }
 
             UIControls.Section(Chinese.E("HUD"));
@@ -203,22 +217,19 @@ namespace eft_dma_radar.Silk.UI.Panels
             bool showFps = Config.EspShowFps;
             if (UIControls.ToggleRow(Chinese.E("Show FPS"), ref showFps))
             {
-                Config.EspShowFps = showFps;
-                Config.MarkDirty();
+                SetEsp(showFps, v => Config.EspShowFps = v);
             }
 
             bool showStatus = Config.EspShowStatusText;
             if (UIControls.ToggleRow(Chinese.E("Show Status Text"), ref showStatus, "显示状态文本叠加层（当前因移除内存写入功能而为空）"))
             {
-                Config.EspShowStatusText = showStatus;
-                Config.MarkDirty();
+                SetEsp(showStatus, v => Config.EspShowStatusText = v);
             }
 
             bool showEnergyHydration = Config.EspShowEnergyHydration;
             if (UIControls.ToggleRow(Chinese.E("Show Energy / Hydration"), ref showEnergyHydration, "右下角显示本地玩家的能量和水分条"))
             {
-                Config.EspShowEnergyHydration = showEnergyHydration;
-                Config.MarkDirty();
+                SetEsp(showEnergyHydration, v => Config.EspShowEnergyHydration = v);
             }
 
             UIControls.Section(Chinese.E("Ballistics (debug)"));

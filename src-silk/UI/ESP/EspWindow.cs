@@ -27,7 +27,8 @@ namespace eft_dma_radar.Silk.UI.ESP
     /// - Default open: borderless fullscreen (no titlebar/borders).
     /// - Double-click: toggle to resizable windowed (borders + title, smaller, movable) &lt;-&gt; back to fullscreen.
     /// - Fullscreen mode never shows borders.
-    /// - F2 hotkey (DMA + local): toggles _renderEnabled (whether perspective is drawn). Does NOT open/close window.
+    /// - F2 hotkey (DMA + local): toggles _renderEnabled (show/hide perspective *inside an already-open window*). NEVER opens or closes the window.
+    ///   This is strictly "在透视窗口内切换显示/不显示".
     /// - ESC (local): always closes window (escape hatch).
     /// - In non-raid: single left-click also closes (silent convenience).
     /// </summary>
@@ -494,6 +495,37 @@ namespace eft_dma_radar.Silk.UI.ESP
                 }
             }
 
+            // Corpses (dead players with gear value). Separate from loose loot.
+            if (Config.EspShowCorpses)
+            {
+                var corpses = Memory.Corpses;
+                if (corpses is not null)
+                {
+                    float maxDistSq = Config.EspCorpseDistance * Config.EspCorpseDistance;
+
+                    foreach (var corpse in corpses)
+                    {
+                        var cPos = corpse.Position;
+                        if (!IsFinite(cPos) || cPos.LengthSquared() < 1f)
+                            continue;
+
+                        float distSq = Vector3.DistanceSquared(localPos, cPos);
+                        if (!float.IsFinite(distSq) || distSq > maxDistSq)
+                            continue;
+
+                        try
+                        {
+                            DrawCorpse(canvas, corpse, MathF.Sqrt(distSq));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.WriteRateLimited(AppLogLevel.Warning, "esp_corpse_draw", TimeSpan.FromSeconds(5),
+                                $"[EspWindow] DrawCorpse failed: {ex.Message}");
+                        }
+                    }
+                }
+            }
+
             // Ballistics overlay — predicted trajectory + live shot trails.
             try { BallisticsRenderer.Draw(canvas); }
             catch (Exception ex)
@@ -866,6 +898,26 @@ namespace eft_dma_radar.Silk.UI.ESP
             canvas.DrawText(label, lx, ly, EspPaints.FontLoot, textPaint);
         }
 
+        private static void DrawCorpse(SKCanvas canvas, LootCorpse corpse, float distance)
+        {
+            var pos = corpse.Position;
+            if (!CameraManager.WorldToScreen(ref pos, out var screenPos, false, false))
+                return;
+
+            string name = (corpse.Name == "Corpse") ? "尸体" : corpse.Name;
+
+            string label = (corpse.GearReady && corpse.TotalValue > 0)
+                ? $"{name} ({LootFilter.FormatPrice(corpse.TotalValue)}) [{(int)distance}m]"
+                : $"{name} [{(int)distance}m]";
+
+            float labelWidth = EspPaints.FontLoot.MeasureText(label);
+            float lx = screenPos.X - labelWidth / 2f;
+            float ly = screenPos.Y;
+
+            canvas.DrawText(label, lx + 1, ly + 1, EspPaints.FontLoot, EspPaints.TextShadow);
+            canvas.DrawText(label, lx, ly, EspPaints.FontLoot, EspPaints.TextCorpse);
+        }
+
         #endregion
 
         #region Helpers
@@ -1031,18 +1083,19 @@ namespace eft_dma_radar.Silk.UI.ESP
         public static void ToggleRender()
         {
             if (!IsOpen)
-                return; // strictly: F2 hotkey no longer controls window open/close
+                return; // F2 (and local F2 inside the window) is *only* for toggling display inside the open window. Never opens/closes.
             _renderEnabled = !_renderEnabled;
             Log.WriteLine($"[EspWindow] Render toggled: {(_renderEnabled ? "ON (perspective visible)" : "OFF (hidden)")}");
         }
 
         /// <summary>
-        /// Sets the render enabled state directly (from UI checkbox). If enabling while closed, opens the window.
+        /// Sets the render enabled state directly (from the "显示透视内容" checkbox in ESP settings).
+        /// This ONLY affects whether perspective content is drawn. It NEVER opens or closes the window.
+        /// The window open/close is controlled exclusively by the dedicated "开启透视窗口" toggle / E key / sidebar.
+        /// F2 hotkey (DMA + local) calls ToggleRender which also strictly guards against window state changes.
         /// </summary>
         public static void SetRenderEnabled(bool enabled)
         {
-            if (!IsOpen && enabled)
-                Open();
             _renderEnabled = enabled;
             Log.WriteLine($"[EspWindow] Render set: {(_renderEnabled ? "ON" : "OFF")}");
         }

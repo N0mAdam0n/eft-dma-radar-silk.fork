@@ -421,6 +421,10 @@ namespace eft_dma_radar.Silk.Config
 
         /// <summary>Show loot labels on the ESP overlay.</summary>
         public bool EspShowLoot { get; set; } = true;
+
+        /// <summary>Show corpses (dead players / gear) labels on the ESP overlay.</summary>
+        public bool EspShowCorpses { get; set; } = true;
+
         public bool EspShowBones { get; set; } = true;
 
         /// <summary>
@@ -473,6 +477,9 @@ namespace eft_dma_radar.Silk.Config
 
         /// <summary>Maximum distance (meters) for ESP loot rendering.</summary>
         public float EspLootDistance { get; set; } = 100f;
+
+        /// <summary>Maximum distance (meters) for ESP corpse rendering.</summary>
+        public float EspCorpseDistance { get; set; } = 250f;
 
         /// <summary>Target monitor index (0-based) for the ESP window. 0 = primary monitor.</summary>
         public int EspTargetScreen { get; set; } = 0;
@@ -895,6 +902,7 @@ namespace eft_dma_radar.Silk.Config
 
             EspPlayerDistance = Math.Clamp(EspPlayerDistance, 10f, 2000f);
             EspLootDistance = Math.Clamp(EspLootDistance, 10f, 500f);
+            EspCorpseDistance = Math.Clamp(EspCorpseDistance, 10f, 1000f);
             EspRenderMode = Math.Clamp(EspRenderMode, 0, 3);
             EspCrosshairType = Math.Clamp(EspCrosshairType, 0, 5);
             EspCrosshairScale = Math.Clamp(EspCrosshairScale, 0.5f, 5f);
@@ -925,31 +933,40 @@ namespace eft_dma_radar.Silk.Config
 
             Hotkeys ??= [];
 
-            // ESP hotkey seeding + migration (updated behavior):
-            // - "ToggleEspWindow" controls *opening/closing* the ESP window (UI sidebar [E], ImGui E, settings).
-            // - "ToggleEspRender" (F2 by default) toggles *display of the perspective* (players/loot etc.) while window stays open.
-            //   F2 no longer opens or closes the window (avoids "开关窗口" with hotkey).
-            //   Double-click on the ESP window itself is used to switch between fullscreen borderless <-> windowed (with borders).
-            // Migration: if an old config had F2 bound to ToggleEspWindow, move the binding to ToggleEspRender and unbind the old.
-            if (!Hotkeys.ContainsKey("ToggleEspRender") || Hotkeys["ToggleEspRender"].Key < 1)
-            {
-                int f2 = VK.F2;
-                if (Hotkeys.TryGetValue("ToggleEspWindow", out var old) && old is { Enabled: true, Key: var k } && k == f2)
-                {
-                    old.Key = 0; // unbind window action from F2
-                    Log.WriteLine("[Config] Migrated F2 binding from ToggleEspWindow -> ToggleEspRender (render toggle only)");
-                }
+            // Strict F2 reservation for "display toggle inside an *already open* ESP window".
+            // F2 must NEVER control opening or closing the window itself (user requirement).
+            // "ToggleEspWindow" action (if user binds a key to it) is only for open/close via hotkey.
+            // "ToggleEspRender" (F2 default) is purely for toggling _renderEnabled (show/hide perspective content) while window stays open.
+            // Double-click on the ESP window itself (local input) is for fullscreen <-> windowed mode switch.
+            bool hotkeyChanged = false;
+            int f2 = VK.F2;
 
+            // If "ToggleEspWindow" is (still) bound to F2, unbind it. F2 is reserved exclusively for inside-window display toggle.
+            if (Hotkeys.TryGetValue("ToggleEspWindow", out var winEntry) &&
+                winEntry is { Enabled: true, Key: var wk } && wk == f2)
+            {
+                winEntry.Key = 0;
+                hotkeyChanged = true;
+                Log.WriteLine("[Config] Unbound F2 from ToggleEspWindow (F2 reserved exclusively for inside-window display toggle)");
+            }
+
+            // Force F2 onto ToggleEspRender. This guarantees that the physical F2 key is *always* the action for
+            // "toggle display / not display inside an already open ESP window" (never for open/close the window).
+            // If the user had rebound the render action to another key, this will move F2 back to it on load (to honor
+            // the explicit "f2绑定的hotkey" requirement). User can rebind in the hotkey panel afterwards if desired.
+            if (!Hotkeys.TryGetValue("ToggleEspRender", out var rendEntry) || rendEntry.Key != f2)
+            {
                 Hotkeys["ToggleEspRender"] = new HotkeyEntry
                 {
                     Enabled = true,
                     Key = f2,
                     Mode = HotkeyMode.Toggle,
                 };
+                hotkeyChanged = true;
+                Log.WriteLine("[Config] Ensured F2 is bound to ToggleEspRender (inside-window display toggle only)");
             }
 
-            // Ensure ToggleEspWindow entry exists (for users who want a hotkey to open the window).
-            // Do not force F2 here — it is reserved for render toggle.
+            // Make sure the window action entry exists (key defaults to 0 — user can bind a *different* key if they want hotkey-controlled open/close).
             if (!Hotkeys.ContainsKey("ToggleEspWindow"))
             {
                 Hotkeys["ToggleEspWindow"] = new HotkeyEntry
@@ -958,6 +975,12 @@ namespace eft_dma_radar.Silk.Config
                     Key = 0,
                     Mode = HotkeyMode.Toggle,
                 };
+                hotkeyChanged = true;
+            }
+
+            if (hotkeyChanged)
+            {
+                MarkDirty(); // persist the F2 reservation / unbind so the correct behavior survives restarts and is saved to disk
             }
             SelectedContainers ??= [];
             QuestBlacklist ??= [];
