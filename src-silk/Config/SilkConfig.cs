@@ -427,10 +427,17 @@ namespace eft_dma_radar.Silk.Config
 
         public bool EspShowBones { get; set; } = true;
 
+        /// <summary>Show 3D player bounding box (corner style) on the ESP overlay.</summary>
+        public bool EspShowBox { get; set; } = true;
+
+        /// <summary>Show head dot marker on the ESP overlay (used for small/far players or standalone).</summary>
+        public bool EspShowHeadDot { get; set; } = false;
+
         /// <summary>
-        /// ESP per-player render mode: 0 = None (labels only), 1 = Bones,
-        /// 2 = Box (+ optional bones via <see cref="EspShowBones"/>), 3 = HeadDot.
-        /// Cycled by the "Cycle ESP Render Mode" hotkey.
+        /// Legacy ESP per-player render mode (kept for hotkey compatibility).
+        /// 0 = None (labels only), 1 = Bones, 2 = Box, 3 = HeadDot.
+        /// The hotkey "EspCycleRenderMode" cycles this and maps to the checkbox states below.
+        /// Primary control is now via independent checkboxes in 透视设置 (Show Bones / Show Box / Show Head Dot).
         /// </summary>
         public int EspRenderMode { get; set; } = 2;
 
@@ -904,6 +911,10 @@ namespace eft_dma_radar.Silk.Config
             EspLootDistance = Math.Clamp(EspLootDistance, 10f, 500f);
             EspCorpseDistance = Math.Clamp(EspCorpseDistance, 10f, 1000f);
             EspRenderMode = Math.Clamp(EspRenderMode, 0, 3);
+
+            // Note: legacy EspRenderMode is still used by the "EspCycleRenderMode" hotkey.
+            // The hotkey now also syncs the values to the checkbox flags (EspShowBox / EspShowBones / EspShowHeadDot).
+            // New primary UI is checkboxes in 透视设置. Property initializers match the old default (mode=2 = box).
             EspCrosshairType = Math.Clamp(EspCrosshairType, 0, 5);
             EspCrosshairScale = Math.Clamp(EspCrosshairScale, 0.5f, 5f);
             EspUIScale = Math.Clamp(EspUIScale, 0.5f, 4f);

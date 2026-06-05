@@ -11,7 +11,6 @@ namespace eft_dma_radar.Silk.UI.Panels
 {
     internal static partial class SettingsPanel
     {
-        private static readonly string[] _espRenderModes = ["无", "骨骼", "方框", "头点"];
         private static readonly string[] _espCrosshairTypes = ["加号", "十字", "圆圈", "点", "方块", "菱形"];
 
         private static List<MonitorInfo>? _monitors;
@@ -100,20 +99,28 @@ namespace eft_dma_radar.Silk.UI.Panels
                 SetEsp(showPlayers, v => Config.EspShowPlayers = v);
             }
 
-            int mode = Config.EspRenderMode;
-            if (UIControls.ComboRow(Chinese.E("Render Mode"), ref mode, _espRenderModes,
-                "每个玩家的绘制方式。\n也可以通过热键循环切换。"))
+            // Player visual elements are now independent checkboxes (no more single "mode" combo).
+            // You can combine e.g. Box + Bones, or Head Dot + Bones, etc.
+            // The hotkey "EspCycleRenderMode" cycles through common presets and updates these.
+            bool showBones = Config.EspShowBones;
+            if (UIControls.ToggleRow(Chinese.E("Show Bones"), ref showBones,
+                "显示玩家骨骼连线（需要骨骼数据）。"))
             {
-                SetEsp(mode, v => Config.EspRenderMode = v);
+                SetEsp(showBones, v => Config.EspShowBones = v);
             }
 
-            if (mode == 2) // Box
+            bool showBox = Config.EspShowBox;
+            if (UIControls.ToggleRow(Chinese.E("Show Box"), ref showBox,
+                "显示玩家方框（角落样式）。小投影时可能不绘制以避免杂乱。"))
             {
-                bool bones = Config.EspShowBones;
-                if (UIControls.ToggleRow(Chinese.E("Show Bones Inside Box"), ref bones))
-                {
-                    SetEsp(bones, v => Config.EspShowBones = v);
-                }
+                SetEsp(showBox, v => Config.EspShowBox = v);
+            }
+
+            bool showHeadDot = Config.EspShowHeadDot;
+            if (UIControls.ToggleRow(Chinese.E("Show Head Dot"), ref showHeadDot,
+                "显示玩家头点（头部位置的小圆点）。可与方框结合使用。"))
+            {
+                SetEsp(showHeadDot, v => Config.EspShowHeadDot = v);
             }
 
             float pDist = Config.EspPlayerDistance;

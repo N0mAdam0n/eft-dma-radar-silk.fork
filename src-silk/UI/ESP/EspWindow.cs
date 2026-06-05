@@ -631,12 +631,14 @@ namespace eft_dma_radar.Silk.UI.ESP
             float topY = MathF.Min(headScreen.Y, feetScreen.Y);
             float bottomY = MathF.Max(headScreen.Y, feetScreen.Y);
 
-            int mode = Config.EspRenderMode;
             // Scale the min-box threshold inversely with UI scale: larger UI scale makes small projections more usable (thicker lines + bigger labels).
             float minBoxH = MinBoxHeight / MathF.Max(0.1f, UiScale);
-            bool drawBox = mode == 2 && boxHeight >= minBoxH;
-            bool drawBones = (mode == 1 || (mode == 2 && Config.EspShowBones)) && haveSkeleton;
-            bool drawHeadDot = mode == 3 || (mode == 2 && boxHeight < minBoxH);
+
+            // Independent checkboxes (primary control from 透视设置). Hotkey cycles presets into these flags.
+            bool drawBox = Config.EspShowBox && boxHeight >= minBoxH;
+            bool drawBones = Config.EspShowBones && haveSkeleton;
+            // Head dot shown if explicitly enabled, and not overridden by a large box (when both box+dot selected).
+            bool drawHeadDot = Config.EspShowHeadDot && (boxHeight < minBoxH || !Config.EspShowBox);
 
             SKRect box = default;
             if (drawBox)
@@ -1072,6 +1074,33 @@ namespace eft_dma_radar.Silk.UI.ESP
         public static void CycleRenderMode()
         {
             Config.EspRenderMode = (Config.EspRenderMode + 1) % 4;
+
+            // Map the legacy mode to the independent checkbox flags so the hotkey
+            // visibly affects what is drawn in ESP and what the settings show.
+            switch (Config.EspRenderMode)
+            {
+                case 0: // labels / nothing
+                    Config.EspShowBones = false;
+                    Config.EspShowBox = false;
+                    Config.EspShowHeadDot = false;
+                    break;
+                case 1: // bones only
+                    Config.EspShowBones = true;
+                    Config.EspShowBox = false;
+                    Config.EspShowHeadDot = false;
+                    break;
+                case 2: // box (with bones)
+                    Config.EspShowBox = true;
+                    Config.EspShowHeadDot = false;
+                    Config.EspShowBones = true;
+                    break;
+                case 3: // head dot only
+                    Config.EspShowBones = false;
+                    Config.EspShowBox = false;
+                    Config.EspShowHeadDot = true;
+                    break;
+            }
+
             Config.MarkDirty();
         }
 

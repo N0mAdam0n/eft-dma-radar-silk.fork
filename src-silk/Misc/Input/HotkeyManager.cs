@@ -108,7 +108,7 @@ internal static class HotkeyManager
             static e => { if (e.IsDown) eft_dma_radar.Silk.UI.ESP.EspWindow.ToggleRender(); }),
 
         new("EspCycleRenderMode", Chinese.T("Cycle ESP Render Mode"), Chinese.T("ESP"),
-            Chinese.T("Cycle player render mode: None → Bones → Box → HeadDot"),
+            Chinese.T("Cycle player ESP style (affects the checkboxes in 透视设置): None → Bones → Box(+Bones) → HeadDot"),
             static e => { if (e.IsDown) eft_dma_radar.Silk.UI.ESP.EspWindow.CycleRenderMode(); }),
 
         new("EspToggleCrosshair", Chinese.T("Toggle ESP Crosshair"), Chinese.T("ESP"),
