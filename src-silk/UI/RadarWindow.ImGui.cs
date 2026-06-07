@@ -942,21 +942,9 @@ namespace eft_dma_radar.Silk.UI
                 Log.WriteLine("[RadarWindow] WARNING: seguisym.ttf not found, icons may render as '?'.");
             }
 
-            // Merge a system Chinese font for CJK text support in ImGui (tooltips, labels, etc.)
-            // Common on Windows: Microsoft YaHei (msyh.ttc) or SimSun, etc.
-            string[] candidateChineseFonts = new[] { "msyh.ttc", "msyhbd.ttc", "simsun.ttc", "simhei.ttf", "simkai.ttf" };
-            string fontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
-            string? chineseFontPath = null;
-            foreach (var name in candidateChineseFonts)
-            {
-                string p = Path.Combine(fontsDir, name);
-                if (File.Exists(p))
-                {
-                    chineseFontPath = p;
-                    break;
-                }
-            }
-
+            // Merge a system Chinese font for CJK text support in ImGui (tooltips, labels, etc.).
+            // Reuses the same discovery logic as CustomFonts (for ESP/Skia hint & corpse text).
+            string? chineseFontPath = CustomFonts.FindSystemChineseFontPath();
             if (chineseFontPath != null)
             {
                 var mergeConfig = ImGuiNative.ImFontConfig_ImFontConfig();

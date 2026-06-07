@@ -912,12 +912,14 @@ namespace eft_dma_radar.Silk.UI.ESP
                 ? $"{name} ({LootFilter.FormatPrice(corpse.TotalValue)}) [{(int)distance}m]"
                 : $"{name} [{(int)distance}m]";
 
-            float labelWidth = EspPaints.FontLoot.MeasureText(label);
+            // Use CJK font for corpse labels ("尸体" + possible CN names) to avoid garbled text.
+            // (Regular loot items keep the NeoSans FontLoot for visual style.)
+            float labelWidth = EspPaints.FontCjk.MeasureText(label);
             float lx = screenPos.X - labelWidth / 2f;
             float ly = screenPos.Y;
 
-            canvas.DrawText(label, lx + 1, ly + 1, EspPaints.FontLoot, EspPaints.TextShadow);
-            canvas.DrawText(label, lx, ly, EspPaints.FontLoot, EspPaints.TextCorpse);
+            canvas.DrawText(label, lx + 1, ly + 1, EspPaints.FontCjk, EspPaints.TextShadow);
+            canvas.DrawText(label, lx, ly, EspPaints.FontCjk, EspPaints.TextCorpse);
         }
 
         #endregion
@@ -931,7 +933,10 @@ namespace eft_dma_radar.Silk.UI.ESP
         /// </summary>
         private static void DrawEspHiddenHint(SKCanvas canvas)
         {
-            var size = _window!.Size;
+            // Use FramebufferSize (physical pixels) not .Size (logical / DPI scaled) so that
+            // centering is correct on high-DPI / scaled displays, and text doesn't appear
+            // shifted or only partially visible.
+            var size = _window!.FramebufferSize;
             float s = UiScale;
 
             string main = "ESP 透视已隐藏";
@@ -939,26 +944,31 @@ namespace eft_dma_radar.Silk.UI.ESP
             string sub2 = "双击 切换窗口模式（缩小带边框 / 全屏无边）";
             string sub3 = "ESC 关闭窗口";
 
+            // Use CJK-capable font (system YaHei etc. if present) so Chinese renders without
+            // garbled characters / tofu / partial glyphs. This is the text users see centered
+            // after pressing F2 to hide ESP content while in-raid.
             // center main
-            float tw = EspPaints.FontStatus.MeasureText(main);
+            float tw = EspPaints.FontHint.MeasureText(main);
             float cx = (size.X - tw) / 2f;
             float cy = size.Y * 0.42f;
-            canvas.DrawText(main, cx + 1, cy + 1, EspPaints.FontStatus, EspPaints.TextShadow);
-            canvas.DrawText(main, cx, cy, EspPaints.FontStatus, EspPaints.TextBar);
+            canvas.DrawText(main, cx + 1, cy + 1, EspPaints.FontHint, EspPaints.TextShadow);
+            canvas.DrawText(main, cx, cy, EspPaints.FontHint, EspPaints.TextBar);
 
-            float y = cy + EspPaints.FontStatus.Size + 18 * s;
+            float y = cy + EspPaints.FontHint.Size + 18 * s;
             foreach (var line in new[] { sub1, sub2, sub3 })
             {
-                float lw = EspPaints.FontStatus.MeasureText(line);
+                float lw = EspPaints.FontHint.MeasureText(line);
                 float lx = (size.X - lw) / 2f;
-                canvas.DrawText(line, lx + 1, y + 1, EspPaints.FontStatus, EspPaints.TextShadow);
-                canvas.DrawText(line, lx, y, EspPaints.FontStatus, EspPaints.TextBar);
-                y += EspPaints.FontStatus.Size + 8 * s;
+                canvas.DrawText(line, lx + 1, y + 1, EspPaints.FontHint, EspPaints.TextShadow);
+                canvas.DrawText(line, lx, y, EspPaints.FontHint, EspPaints.TextBar);
+                y += EspPaints.FontHint.Size + 8 * s;
             }
         }
 
         private static void DrawFpsOverlay(SKCanvas canvas)
         {
+            // (FPS overlay uses small fixed offsets; no full-size centering needed.
+            // Framebuffer correctness is handled by the GL viewport.)
             float s = UiScale;
             string fpsText = $"{_fps} FPS";
             canvas.DrawText(fpsText, 7 * s, 17 * s, EspPaints.FontInfo, EspPaints.TextShadow);
@@ -970,7 +980,7 @@ namespace eft_dma_radar.Silk.UI.ESP
         /// </summary>
         private static void DrawCrosshair(SKCanvas canvas)
         {
-            var size = _window!.Size;
+            var size = _window!.FramebufferSize;
             if (size.X <= 0 || size.Y <= 0)
                 return;
 
@@ -1027,7 +1037,7 @@ namespace eft_dma_radar.Silk.UI.ESP
         /// </summary>
         private static void DrawEnergyHydration(SKCanvas canvas, LocalPlayer lp)
         {
-            var size = _window!.Size;
+            var size = _window!.FramebufferSize;
             float s = UiScale;
             float barW = 150f * s;
             float barH = 12f * s;

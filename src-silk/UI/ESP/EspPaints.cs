@@ -293,10 +293,26 @@ namespace eft_dma_radar.Silk.UI.ESP
 
         #endregion
 
+        #region CJK / Localized Hint Fonts (for F2 hidden hint, corpses, etc.)
+
+        /// <summary>
+        /// Scaled font backed by system CJK typeface (if available) or Regular fallback.
+        /// Used for Chinese UI text in ESP that must not produce garbled characters (e.g. the centered
+        /// "ESP 透视已隐藏" hint when F2-hiding in raid, and "尸体" labels).
+        /// </summary>
+        public static SKFont FontCjk { get; private set; } = new(CustomFonts.Regular, 10) { Subpixel = true };
+
+        /// <summary>
+        /// Larger CJK-capable font for the F2 "hidden" status hint text (centered instructions).
+        /// </summary>
+        public static SKFont FontHint { get; private set; } = new(CustomFonts.Regular, 14) { Subpixel = true };
+
+        #endregion
+
         #region ESP UI Scaling
 
         /// <summary>Current effective UI scale for ESP (set via SetEspScale from EspWindow render).</summary>
-        public static float EspScale { get; private set; } = 1f;
+        public static float EspScale { get; private set; } = 0f;
 
         /// <summary>
         /// Updates all ESP-specific font sizes and stroke widths according to the given scale.
@@ -316,6 +332,11 @@ namespace eft_dma_radar.Silk.UI.ESP
             FontLoot = new(CustomFonts.Regular, 10 * scale) { Subpixel = true };
             FontBar = new(CustomFonts.Regular, 11 * scale) { Subpixel = true };
             FontStatus = new(CustomFonts.Regular, 14 * scale) { Subpixel = true };
+
+            // CJK-aware fonts for localized text (must pick Cjk typeface if present, even at default scale=1).
+            var cjkFace = CustomFonts.Cjk ?? CustomFonts.Regular;
+            FontCjk = new(cjkFace, 10 * scale) { Subpixel = true };
+            FontHint = new(cjkFace, 14 * scale) { Subpixel = true };
 
             // Update mutable stroke widths on all relevant paints (fills don't need it)
             BoxOutline.StrokeWidth = 3f * scale;
