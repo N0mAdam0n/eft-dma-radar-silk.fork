@@ -125,6 +125,32 @@ namespace eft_dma_radar.Silk.UI.ESP
 
         #endregion
 
+        #region Tripwires (拌线陷阱 on ESP)
+
+        /// <summary>Tripwire line between From/To endpoints — orange/red stroke.</summary>
+        public static SKPaint TripwireLine { get; } = new()
+        {
+            Color = new SKColor(255, 100, 40, 210),
+            StrokeWidth = 1.8f,
+            Style = SKPaintStyle.Stroke,
+            IsAntialias = true,
+            StrokeJoin = SKStrokeJoin.Round,
+            StrokeCap = SKStrokeCap.Round,
+        };
+
+        /// <summary>Endpoint markers for tripwire on ESP.</summary>
+        public static SKPaint TripwireDot { get; } = new()
+        {
+            Color = new SKColor(255, 90, 40, 235),
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true,
+        };
+
+        /// <summary>Text label for tripwire name/distance on ESP.</summary>
+        public static SKPaint TextTripwire { get; } = MakeFillPaint(255, 130, 60, 235);
+
+        #endregion
+
         #region Health Bar
 
         public static SKPaint HealthBarBg { get; } = new()
@@ -361,6 +387,9 @@ namespace eft_dma_radar.Silk.UI.ESP
             GrenadePrediction.StrokeWidth = 1.9f * scale;
             PredictedTrajectory.StrokeWidth = 2.0f * scale;
             LiveShotTrail.StrokeWidth = 2.0f * scale;
+
+            // Tripwire (ESP)
+            TripwireLine.StrokeWidth = 1.8f * scale;
         }
 
         #endregion

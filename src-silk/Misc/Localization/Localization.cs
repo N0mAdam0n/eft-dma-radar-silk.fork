@@ -642,6 +642,10 @@ namespace eft_dma_radar.Silk.Misc.Localization
             ["Grenade Dot Size"] = "手雷点大小",
             ["Grenade Trail Width"] = "手雷轨迹线宽",
 
+            // Tripwires (拌线陷阱) on ESP
+            ["Show Tripwires"] = "显示拌线陷阱",
+            ["Tripwire Max Distance"] = "拌线显示范围",
+
             // Render toggle (F2 / top of EspTab)
             ["Show ESP Render"] = "显示透视内容",
             ["Toggle ESP perspective drawing. When off, double-click to shrink the window to a bordered movable panel so game is not obscured. F2 hotkey has the same effect."] = "切换ESP透视绘制（玩家/物资/手雷等）。关闭时双击可缩小为带边框小窗，避免遮挡游戏。F2热键同效。",

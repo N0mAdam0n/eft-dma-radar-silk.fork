@@ -376,6 +376,30 @@ namespace eft_dma_radar.Silk.UI.Panels
 
                 ImGui.Unindent(16);
             }
+
+            // ── Tripwires (拌线陷阱 / 绊索) on ESP ─────────────────────────────────────
+            UIControls.Section(Chinese.E("Tripwires (ESP)"));
+
+            bool showTripwires = Config.EspShowTripwires;
+            if (UIControls.ToggleRow(Chinese.E("Show Tripwires"), ref showTripwires,
+                "在ESP透视中显示拌线陷阱。绘制两端点之间的连线、端点标记、名称和距离。"))
+            {
+                SetEsp(showTripwires, v => Config.EspShowTripwires = v);
+            }
+
+            if (showTripwires)
+            {
+                ImGui.Indent(16);
+
+                float twDist = Config.EspTripwireDistance;
+                if (UIControls.StepperFloat(Chinese.E("Tripwire Max Distance"), ref twDist, 10f, 500f, 10f, "{0:0}m",
+                    "仅显示距离本地玩家此范围内的拌线陷阱。"))
+                {
+                    SetEsp(twDist, v => Config.EspTripwireDistance = v);
+                }
+
+                ImGui.Unindent(16);
+            }
         }
     }
 }

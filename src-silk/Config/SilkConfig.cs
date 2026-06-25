@@ -425,6 +425,10 @@ namespace eft_dma_radar.Silk.Config
         /// <summary>Show corpses (dead players / gear) labels on the ESP overlay.</summary>
         public bool EspShowCorpses { get; set; } = true;
 
+        /// <summary>Show tripwires (拌线陷阱 / 绊索) on the ESP overlay. Draws line between endpoints + markers + distance.</summary>
+        public bool EspShowTripwires { get; set; } = true;
+
+        /// <summary>Show skeleton bones for players on the ESP overlay. Now independent checkbox (can combine with box or head dot).</summary>
         public bool EspShowBones { get; set; } = true;
 
         /// <summary>Show 3D player bounding box (corner style) on the ESP overlay.</summary>
@@ -487,6 +491,9 @@ namespace eft_dma_radar.Silk.Config
 
         /// <summary>Maximum distance (meters) for ESP corpse rendering.</summary>
         public float EspCorpseDistance { get; set; } = 250f;
+
+        /// <summary>Maximum distance (meters) for ESP tripwire (拌线陷阱) rendering.</summary>
+        public float EspTripwireDistance { get; set; } = 250f;
 
         /// <summary>Target monitor index (0-based) for the ESP window. 0 = primary monitor.</summary>
         public int EspTargetScreen { get; set; } = 0;
@@ -910,6 +917,7 @@ namespace eft_dma_radar.Silk.Config
             EspPlayerDistance = Math.Clamp(EspPlayerDistance, 10f, 2000f);
             EspLootDistance = Math.Clamp(EspLootDistance, 10f, 500f);
             EspCorpseDistance = Math.Clamp(EspCorpseDistance, 10f, 1000f);
+            EspTripwireDistance = Math.Clamp(EspTripwireDistance, 10f, 500f);
             EspRenderMode = Math.Clamp(EspRenderMode, 0, 3);
 
             // Note: legacy EspRenderMode is still used by the "EspCycleRenderMode" hotkey.

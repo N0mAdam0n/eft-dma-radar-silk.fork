@@ -907,10 +907,11 @@ namespace eft_dma_radar.Silk.Tarkov.GameWorld
             try
             {
                 // Explosives: grenades, tripwires, mortar projectiles.
-                // Refresh is forced if either radar explosives or ESP grenade trails are enabled.
-                // (ESP grenades need the manager for position history even if radar layer is off.)
+                // Refresh is forced if either radar explosives or any ESP explosive-related feature is enabled.
+                // (ESP grenades need the manager for position history; tripwires for static markers.)
                 bool wantExplosives = SilkProgram.Config.ShowExplosives ||
-                                      (SilkProgram.Config.EspGrenades?.Enabled ?? false);
+                                      (SilkProgram.Config.EspGrenades?.Enabled ?? false) ||
+                                      SilkProgram.Config.EspShowTripwires;
                 if (wantExplosives)
                     _explosivesManager?.Refresh();
 

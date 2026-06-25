@@ -3,6 +3,7 @@
 // See LICENSE in the repository root for details.
 
 using System.Runtime.CompilerServices;
+using eft_dma_radar.Silk.Tarkov.GameWorld.Explosives;
 using eft_dma_radar.Silk.Tarkov.GameWorld.Player;
 using eft_dma_radar.Silk.Tarkov.Unity;
 using Silk.NET.Input;
@@ -526,6 +527,42 @@ namespace eft_dma_radar.Silk.UI.ESP
                 }
             }
 
+            // Tripwires (拌线陷阱). Static, two-point lines with markers.
+            if (Config.EspShowTripwires)
+            {
+                var explosives = Memory.Explosives;
+                if (explosives is not null)
+                {
+                    float maxDistSq = Config.EspTripwireDistance * Config.EspTripwireDistance;
+
+                    foreach (var exp in explosives)
+                    {
+                        if (!exp.IsActive) continue;
+                        // Only Tripwire for now (grenades handled by dedicated trail renderer)
+                        if (exp is not Tripwire tw)
+                            continue;
+
+                        var tPos = tw.Position;
+                        if (!IsFinite(tPos) || tPos.LengthSquared() < 1f)
+                            continue;
+
+                        float distSq = Vector3.DistanceSquared(localPos, tPos);
+                        if (!float.IsFinite(distSq) || distSq > maxDistSq)
+                            continue;
+
+                        try
+                        {
+                            DrawTripwire(canvas, tw, MathF.Sqrt(distSq));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.WriteRateLimited(AppLogLevel.Warning, "esp_tripwire_draw", TimeSpan.FromSeconds(5),
+                                $"[EspWindow] DrawTripwire failed: {ex.Message}");
+                        }
+                    }
+                }
+            }
+
             // Ballistics overlay — predicted trajectory + live shot trails.
             try { BallisticsRenderer.Draw(canvas); }
             catch (Exception ex)
@@ -920,6 +957,69 @@ namespace eft_dma_radar.Silk.UI.ESP
 
             canvas.DrawText(label, lx + 1, ly + 1, EspPaints.FontCjk, EspPaints.TextShadow);
             canvas.DrawText(label, lx, ly, EspPaints.FontCjk, EspPaints.TextCorpse);
+        }
+
+        /// <summary>
+        /// Draws a tripwire (拌线陷阱) on the ESP: line between From/To, endpoint dots,
+        /// name label and distance. Uses the cached positions from Tripwire (read once at discovery).
+        /// </summary>
+        private static void DrawTripwire(SKCanvas canvas, Tripwire tw, float distance)
+        {
+            var toPos = tw.Position;
+            var fromPos = tw.FromPosition;
+
+            // Project both ends (allow offscreen for long wires; Skia will clip the line).
+            bool hasTo = CameraManager.WorldToScreen(ref toPos, out var toScr, onScreenCheck: false);
+            bool hasFrom = CameraManager.WorldToScreen(ref fromPos, out var fromScr, onScreenCheck: false);
+
+            if (!hasTo && !hasFrom)
+                return;
+
+            float s = EspPaints.EspScale;
+
+            // Draw the connecting line (always attempt if we have both projections).
+            if (hasTo && hasFrom)
+            {
+                canvas.DrawLine(fromScr, toScr, EspPaints.TripwireLine);
+            }
+
+            // Draw endpoint dots (To is the "main" end per radar logic).
+            float r = 3.2f * s;
+            if (hasTo)
+            {
+                canvas.DrawCircle(toScr.X, toScr.Y, r, EspPaints.TripwireDot);
+                // subtle ring
+                canvas.DrawCircle(toScr.X, toScr.Y, r + 1.2f * s, EspPaints.BoxOutline);
+            }
+            if (hasFrom)
+            {
+                canvas.DrawCircle(fromScr.X, fromScr.Y, r * 0.85f, EspPaints.TripwireDot);
+            }
+
+            // Labels (name + distance) anchored at the To end if visible.
+            var labelPos = hasTo ? toScr : (hasFrom ? fromScr : default);
+            if (hasTo || hasFrom)
+            {
+                float baseY = labelPos.Y;
+
+                // Name (from grenade template short name or "Tripwire")
+                string name = string.IsNullOrWhiteSpace(tw.Name) ? "Tripwire" : tw.Name;
+                float nameW = EspPaints.FontLoot.MeasureText(name);
+                float nx = labelPos.X - nameW / 2f;
+                float ny = baseY - 14f * s;
+
+                canvas.DrawText(name, nx + 1, ny + 1, EspPaints.FontLoot, EspPaints.TextShadow);
+                canvas.DrawText(name, nx, ny, EspPaints.FontLoot, EspPaints.TextTripwire);
+
+                // Distance
+                string distText = $"{(int)distance}m";
+                float distW = EspPaints.FontInfo.MeasureText(distText);
+                float dx = labelPos.X - distW / 2f;
+                float dy = baseY + 14f * s;
+
+                canvas.DrawText(distText, dx + 1, dy + 1, EspPaints.FontInfo, EspPaints.TextShadow);
+                canvas.DrawText(distText, dx, dy, EspPaints.FontInfo, EspPaints.TextTripwire);
+            }
         }
 
         #endregion
