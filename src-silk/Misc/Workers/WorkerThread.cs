@@ -35,8 +35,10 @@ namespace eft_dma_radar.Silk.Misc.Workers
         /// With <see cref="WorkerSleepMode.DynamicSleep"/>, actual sleep = max(0, SleepDuration - workTime).
         /// With <see cref="WorkerSleepMode.Default"/>, always sleeps this full duration.
         /// Zero means no sleep (continuous loop).
+        /// May be set at runtime (e.g. from within <see cref="PerformWork"/>); the new
+        /// value is picked up on the next work cycle.
         /// </summary>
-        public TimeSpan SleepDuration { get; init; } = TimeSpan.Zero;
+        public TimeSpan SleepDuration { get; set; } = TimeSpan.Zero;
 
         /// <summary>
         /// Thread priority for the worker thread.
@@ -87,13 +89,18 @@ namespace eft_dma_radar.Silk.Misc.Workers
         private void Worker()
         {
             Log.WriteLine($"[WorkerThread] '{Name}' starting...");
-            bool shouldSleep = SleepDuration > TimeSpan.Zero;
-            bool dynamicSleep = shouldSleep && SleepMode == WorkerSleepMode.DynamicSleep;
             var ct = _cts.Token;
             var waitHandle = ct.WaitHandle;
 
             while (!ct.IsCancellationRequested)
             {
+                // Snapshot cadence once per cycle so a runtime change to SleepDuration
+                // (e.g. from within PerformWork) is honored on the next cycle, including
+                // crossing the no-sleep (zero) boundary.
+                var sleepDuration = SleepDuration;
+                bool shouldSleep = sleepDuration > TimeSpan.Zero;
+                bool dynamicSleep = shouldSleep && SleepMode == WorkerSleepMode.DynamicSleep;
+
                 long start = dynamicSleep ? Stopwatch.GetTimestamp() : default;
                 try
                 {
@@ -116,11 +123,11 @@ namespace eft_dma_radar.Silk.Misc.Workers
                         if (dynamicSleep)
                         {
                             var elapsed = Stopwatch.GetElapsedTime(start);
-                            toSleep = SleepDuration - elapsed;
+                            toSleep = sleepDuration - elapsed;
                         }
                         else if (shouldSleep)
                         {
-                            toSleep = SleepDuration;
+                            toSleep = sleepDuration;
                         }
                         else
                         {

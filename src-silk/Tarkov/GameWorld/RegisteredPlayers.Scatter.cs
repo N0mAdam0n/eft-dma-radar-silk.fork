@@ -1102,8 +1102,8 @@ namespace eft_dma_radar.Silk.Tarkov.GameWorld
             EnsureBuffer(ref _birValid, n, fillValue: true);
 
             var opcPtrs = _birOpcPtrs;       // Observed: OPC; Client: MovementContext
-            var mcStep1 = _birMcStep1;       // Observed: OPC+0xD8; Client: unused
-            var mcFinal = _birMcFinal;       // Observed: step1+0x98; Client: unused
+            var mcStep1 = _birMcStep1;       // Observed: OPC+MovementController[0]; Client: unused
+            var mcFinal = _birMcFinal;       // Observed: step1+MovementController[1]; Client: unused
             var rotAddrs = _birRotAddrs;
             var valid = _birValid;
 
@@ -1143,7 +1143,7 @@ namespace eft_dma_radar.Silk.Tarkov.GameWorld
             rValidCount = CountTrue(valid, n);
             Log.Write(AppLogLevel.Debug, $"[RegisteredPlayers] BatchInitRotations R1 (OPC/MovCtx): {rValidCount}/{n} valid");
 
-            // Round 2: Observed only — read MovementController step 1 (OPC + 0xD8)
+            // Round 2: Observed only — read MovementController step 1 (OPC + MovementController[0])
             bool anyObserved = false;
             for (int i = 0; i < n; i++)
                 if (valid[i] && entries[i].IsObserved) { anyObserved = true; break; }
@@ -1166,7 +1166,7 @@ namespace eft_dma_radar.Silk.Tarkov.GameWorld
                 rValidCount = CountTrue(valid, n);
                 Log.Write(AppLogLevel.Debug, $"[RegisteredPlayers] BatchInitRotations R2 (MC step1): {rValidCount}/{n} valid");
 
-                // Round 3: Observed only — read MovementController step 2 (step1 + 0x98)
+                // Round 3: Observed only — read MovementController step 2 (step1 + MovementController[1])
                 using var scatter2 = Memory.GetScatter(VmmFlags.NOCACHE);
                 for (int i = 0; i < n; i++)
                     if (valid[i] && entries[i].IsObserved)

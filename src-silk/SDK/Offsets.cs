@@ -402,7 +402,8 @@ namespace SDK
             public static uint InventoryController = 0x10;
             public static uint Player = 0x18;
             public static uint InfoContainer = 0xD0;
-            public static readonly uint[] MovementController = [0xD8, 0x98];
+            // Updated upstream 2026-07/08: was [0xD8, 0x98]; confirmed via IL2CPP dumps.
+            public static readonly uint[] MovementController = [0xF0, 0xB0];
             public static uint HealthController = 0xE8;
             public static uint ArmorInfoController = 0x110;
             public static uint HandsController = 0x120;
@@ -642,7 +643,10 @@ namespace SDK
         }
         public readonly partial struct Stash
         {
-            public static uint Grids = 0x98;
+            // StashClass derives from CompoundItem, so its Grids[] lives at the
+            // inherited CompoundItem.Grids offset (0x78) — confirmed by IL2CPP dumps.
+            // Previous 0x98 pointed at an unrelated item-component field (0 items).
+            public static uint Grids = 0x78;
             public static uint Slots = 0x80;
         }
         public readonly partial struct Equipment
@@ -804,16 +808,14 @@ namespace SDK
             public static uint Weight = 0x28;
             public static uint QuestItem = 0x34;
         }
-        public readonly partial struct ModTemplate
-        {
-            public static uint Velocity = 0x188;
-        }
+        // Ballistics inputs — fallbacks from il2cpp dump; resolved live via schema when possible.
+        // Core velocity/mass fields updated from upstream (2026-07/08). Damage/Pen kept for HUD.
         public readonly partial struct AmmoTemplate
         {
-            public static uint InitialSpeed = 0x1A4;
-            public static uint BallisticCoeficient = 0x1B8;
-            public static uint BulletMassGram = 0x25C;
-            public static uint BulletDiameterMilimeters = 0x260;
+            public static uint InitialSpeed = 0x1DC;
+            public static uint BallisticCoeficient = 0x1F0;
+            public static uint BulletMassGram = 0x294;
+            public static uint BulletDiameterMilimeters = 0x298;
             /// <summary><c>int Damage</c> — base damage value (used by HUD).</summary>
             public static uint Damage = 0x158;
             /// <summary><c>int PenetrationPower</c> — armor penetration rating (used by HUD).</summary>
@@ -821,17 +823,21 @@ namespace SDK
         }
         public readonly partial struct WeaponTemplate
         {
-            public static uint Velocity = 0x25C;
+            public static uint Velocity = 0x284;
             public static uint AllowJam = 0x310;
             public static uint AllowFeed = 0x311;
             public static uint AllowMisfire = 0x312;
             public static uint AllowSlide = 0x313;
-            /// <summary><c>float RecoilForceBack</c> — used by future aimbot recoil model.</summary>
+            /// <summary><c>float RecoilForceBack</c>.</summary>
             public static uint RecoilForceBack = 0x2E0;
             /// <summary><c>float RecoilForceUp</c>.</summary>
             public static uint RecoilForceUp = 0x2E4;
             /// <summary><c>float RecoilCamera</c>.</summary>
             public static uint RecoilCamera = 0x2EC;
+        }
+        public readonly partial struct ModTemplate
+        {
+            public static uint Velocity = 0x1B8;
         }
         // ── Ballistics ──────────────────────────────────────────────────────────
         // Hardcoded fallback offsets sourced from prior-build reverse engineering

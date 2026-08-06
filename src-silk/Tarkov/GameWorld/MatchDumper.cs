@@ -2137,8 +2137,8 @@ namespace eft_dma_radar.Silk.Tarkov.GameWorld
             try
             {
                 // ── MovementController → ObservedPlayerMovementModel ─────────────
-                // OPC+0xD8 → pointer to ObservedPlayerMovementController (step1)
-                // step1+0x98 → ObservedMovementController (step2) holding Rotation/Velocity/Pose
+                // OPC+MovementController[0] → ObservedPlayerMovementController (step1)
+                // step1+MovementController[1] → ObservedMovementController (step2) holding Rotation/Velocity/Pose
                 if (Memory.TryReadPtr(opcBase + Offsets.ObservedPlayerController.MovementController[0], out var movCtrl)
                     && movCtrl.IsValidVirtualAddress())
                 {

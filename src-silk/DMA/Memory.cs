@@ -902,14 +902,27 @@ namespace eft_dma_radar.Silk.DMA
 
         #region Read Methods
 
+        /// <summary>
+        /// Compile-time element size of <typeparamref name="T"/>. JIT-folds to a constant.
+        /// Mirrors the <c>sizeof(T)</c> the underlying VmmSharpEx read uses, and accepts the
+        /// same <c>allows ref struct</c> generics as <see cref="ReadValue{T}"/>.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe int SizeOf<T>() where T : unmanaged, allows ref struct => sizeof(T);
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T ReadValue<T>(ulong addr, bool useCache = true)
             where T : unmanaged, allows ref struct
         {
             if (!addr.IsValidVirtualAddress())
                 throw new BadPtrException(0, addr);
-            DmaStats.AddDirectRead();
-            return VmmOrThrow().MemReadValue<T>(_pid, addr, ToFlags(useCache));
+            DmaStats.AddDirectRead(addr, SizeOf<T>(), useCache);
+            // Use the non-throwing variant so we can attach the faulting address to the
+            // exception — the bare "Memory Read Failed!" from VmmSharpEx tells you nothing
+            // about which read died. The interpolated string is only built on failure.
+            if (!VmmOrThrow().MemReadValue<T>(_pid, addr, out var result, ToFlags(useCache)))
+                throw new VmmException($"ReadValue<{typeof(T).Name}> failed @ 0x{addr:X}");
+            return result;
         }
 
         public static ulong ReadPtr(ulong addr, bool useCache = true)
@@ -934,9 +947,9 @@ namespace eft_dma_radar.Silk.DMA
             if (!addr.IsValidVirtualAddress())
                 throw new BadPtrException(0, addr);
             if (buffer.IsEmpty) return;
-            DmaStats.AddDirectRead();
+            DmaStats.AddDirectRead(addr, (long)buffer.Length * SizeOf<T>(), useCache);
             if (!VmmOrThrow().MemReadSpan(_pid, addr, buffer, ToFlags(useCache)))
-                throw new VmmException("Memory read failed.");
+                throw new VmmException($"ReadBuffer<{typeof(T).Name}> failed @ 0x{addr:X} ({buffer.Length} elems)");
         }
 
         public static T[] ReadArray<T>(ulong addr, int count, bool useCache = true)
@@ -954,9 +967,9 @@ namespace eft_dma_radar.Silk.DMA
             ArgumentOutOfRangeException.ThrowIfGreaterThan(cb, 0x1000, nameof(cb));
             if (!addr.IsValidVirtualAddress())
                 throw new BadPtrException(0, addr);
-            DmaStats.AddDirectRead();
+            DmaStats.AddDirectRead(addr, cb, useCache);
             return VmmOrThrow().MemReadString(_pid, addr, cb, Encoding.UTF8, ToFlags(useCache))
-                ?? throw new VmmException("String read failed.");
+                ?? throw new VmmException($"ReadString failed @ 0x{addr:X} (cb={cb})");
         }
 
         public static string ReadUnityString(ulong addr, int length = 128, bool useCache = true)
@@ -965,9 +978,9 @@ namespace eft_dma_radar.Silk.DMA
             ArgumentOutOfRangeException.ThrowIfGreaterThan(length, 0x1000, nameof(length));
             if (!addr.IsValidVirtualAddress())
                 throw new BadPtrException(0, addr);
-            DmaStats.AddDirectRead();
+            DmaStats.AddDirectRead(addr + 0x14, length, useCache);
             return VmmOrThrow().MemReadString(_pid, addr + 0x14, length, Encoding.Unicode, ToFlags(useCache))
-                ?? throw new VmmException("Unity string read failed.");
+                ?? throw new VmmException($"ReadUnityString failed @ 0x{addr + 0x14:X} (len={length})");
         }
 
         #endregion
@@ -979,7 +992,7 @@ namespace eft_dma_radar.Silk.DMA
             where T : unmanaged, allows ref struct
         {
             if (!addr.IsValidVirtualAddress()) { result = default; return false; }
-            DmaStats.AddDirectRead();
+            DmaStats.AddDirectRead(addr, SizeOf<T>(), useCache);
             return VmmOrThrow().MemReadValue(_pid, addr, out result, ToFlags(useCache));
         }
 
@@ -1004,7 +1017,7 @@ namespace eft_dma_radar.Silk.DMA
         {
             if (!addr.IsValidVirtualAddress()) return false;
             if (buffer.IsEmpty) return true;
-            DmaStats.AddDirectRead();
+            DmaStats.AddDirectRead(addr, (long)buffer.Length * SizeOf<T>(), useCache);
             return VmmOrThrow().MemReadSpan(_pid, addr, buffer, ToFlags(useCache));
         }
 
@@ -1013,7 +1026,7 @@ namespace eft_dma_radar.Silk.DMA
             result = null;
             if (cb <= 0 || cb > 0x1000) return false;
             if (!addr.IsValidVirtualAddress()) return false;
-            DmaStats.AddDirectRead();
+            DmaStats.AddDirectRead(addr, cb, useCache);
             result = VmmOrThrow().MemReadString(_pid, addr, cb, Encoding.UTF8, ToFlags(useCache));
             return result is not null;
         }
@@ -1023,7 +1036,7 @@ namespace eft_dma_radar.Silk.DMA
             result = null;
             if (length <= 0 || length > 0x1000) return false;
             if (!addr.IsValidVirtualAddress()) return false;
-            DmaStats.AddDirectRead();
+            DmaStats.AddDirectRead(addr + 0x14, length, useCache);
             result = VmmOrThrow().MemReadString(_pid, addr + 0x14, length, Encoding.Unicode, ToFlags(useCache));
             return result is not null;
         }
@@ -1091,6 +1104,7 @@ namespace eft_dma_radar.Silk.DMA
             if (!addr.IsValidVirtualAddress())
                 throw new BadPtrException(0, addr);
             Span<byte> buf = stackalloc byte[sizeof(T)];
+            if (buf.IsEmpty) return;
             Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(buf), value);
             VmmOrThrow().MemWriteSpan(_pid, addr, buf);
         }
@@ -1124,6 +1138,7 @@ namespace eft_dma_radar.Silk.DMA
         {
             if (!addr.IsValidVirtualAddress())
                 throw new BadPtrException(0, addr);
+            if (buffer.IsEmpty) return;
             VmmOrThrow().MemWriteSpan(_pid, addr, buffer);
         }
 
